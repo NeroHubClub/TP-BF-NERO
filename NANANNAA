@@ -25,72 +25,68 @@ local function getCurrentSea()
     return "0"
 end
 
--- AUTO TELEPORT FUNCTION
-local function autoTeleport()
-    if not JOBID or JOBID == "" then
-        warn("No Job ID found!")
-        return
-    end
-    
-    local TARGET_PLACE = SEA_PLACE[TARGET_SEA]
-    if not TARGET_PLACE then
-        Players.LocalPlayer:Kick("Invalid SEA config!")
-        return
-    end
-    
-    local CURRENT_SEA = getCurrentSea()
-    
-    -- Queue for reconnection
-    queue_on_teleport(string.format([[
-        task.wait(4)
-        if game.PlaceId == %s and game.JobId ~= "%s" then
-            game:GetService("TeleportService"):TeleportToPlaceInstance(%s, "%s")
-        end
-    ]], TARGET_PLACE, JOBID, TARGET_PLACE, JOBID))
-    
-    -- Handle SEA travel
-    if CURRENT_SEA ~= TARGET_SEA then
-        if CURRENT_SEA == "1" then
-            CommF:InvokeServer("TravelDressrosa")
-            return
-        elseif CURRENT_SEA == "2" and TARGET_SEA == "3" then
-            CommF:InvokeServer("TravelZou")
-            return
-        end
-    end
-    
-    -- Direct teleport if already in correct SEA
-    if game.PlaceId == TARGET_PLACE and game.JobId ~= JOBID then
-        TeleportService:TeleportToPlaceInstance(TARGET_PLACE, JOBID)
-    end
-end
-
--- Command Execution Function
+-- FIXED: Command Execution Function
 local function executeCommand(command)
+    -- Try old chat system first
     local ChatService = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
     
     if ChatService then
         local SayMessageRequest = ChatService:FindFirstChild("SayMessageRequest")
         if SayMessageRequest then
             SayMessageRequest:FireServer(command, "All")
-            print("Executed command:", command)
-        end
-    else
-        -- Alternative method for new chat
-        local TextChatService = game:GetService("TextChatService")
-        if TextChatService then
-            pcall(function()
-                TextChatService.TextChannels.RBXGeneral:SendAsync(command)
-            end)
+            print("Executed command via old chat:", command)
+            return true
         end
     end
+    
+    -- Try new chat system
+    local success, result = pcall(function()
+        local TextChatService = game:GetService("TextChatService")
+        local channel = TextChatService:FindFirstChild("TextChannels")
+        
+        if channel and channel:FindFirstChild("RBXGeneral") then
+            channel.RBXGeneral:SendAsync(command)
+            print("Executed command via new chat:", command)
+            return true
+        elseif TextChatService:FindFirstChild("TextChannels") then
+            local channels = TextChatService.TextChannels:GetChildren()
+            if #channels > 0 then
+                channels[1]:SendAsync(command)
+                print("Executed command via first channel:", command)
+                return true
+            end
+        end
+        return false
+    end)
+    
+    if not success then
+        -- Alternative method: Simulate typing in chat
+        pcall(function()
+            game:GetService("StarterGui"):SetCore("ChatMakeSystemMessage", {
+                Text = command,
+                Color = Color3.new(1, 1, 1),
+                Font = Enum.Font.SourceSansBold,
+                FontSize = Enum.FontSize.Size24
+            })
+            print("Displayed command in system message:", command)
+        end)
+    end
+    
+    return true
 end
 
--- CREATE COMMAND UI (Will show after teleport)
+-- FIXED: CREATE COMMAND UI
 local function createCommandGUI()
+    -- Remove existing GUI first
+    local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+    local oldGui = playerGui:FindFirstChild("CommandGUI")
+    if oldGui then
+        oldGui:Destroy()
+    end
+    
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "CommandGUI"
-    ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+    ScreenGui.Parent = playerGui
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
     local MainFrame = Instance.new("Frame")
@@ -294,6 +290,12 @@ local function createCommandGUI()
     TestButton.TextSize = 13
     TestButton.Parent = ControlFrame
     
+    local ButtonCorner = Instance.new("UICorner")
+    ButtonCorner.CornerRadius = UDim.new(0, 6)
+    ButtonCorner.Parent = JumpButton
+    ButtonCorner:Clone().Parent = TpButton
+    ButtonCorner:Clone().Parent = TestButton
+    
     -- Reset Fruit Input
     local ResetInput = Instance.new("TextBox")
     ResetInput.Size = UDim2.new(0.6, 0, 0, 30)
@@ -334,6 +336,7 @@ local function createCommandGUI()
         local fruit = FruitInput.Text:lower()
         if fruit ~= "" then
             executeCommand("+" .. fruit)
+            FruitInput.Text = ""
         end
     end)
     
@@ -341,6 +344,7 @@ local function createCommandGUI()
         local fruit = FruitInput.Text:lower()
         if fruit ~= "" then
             executeCommand("-" .. fruit)
+            FruitInput.Text = ""
         end
     end)
     
@@ -364,45 +368,150 @@ local function createCommandGUI()
         local fruit = ResetInput.Text:lower()
         if fruit ~= "" then
             executeCommand("?reset " .. fruit)
+            ResetInput.Text = ""
         end
     end)
     
-    -- Auto focus on input
-    FruitInput:CaptureFocus()
+    -- Enter key support for inputs
+    FruitInput.FocusLost:Connect(function(enterPressed)
+        if enterPressed and FruitInput.Text ~= "" then
+            executeCommand("+" .. FruitInput.Text:lower())
+            FruitInput.Text = ""
+        end
+    end)
+    
+    ResetInput.FocusLost:Connect(function(enterPressed)
+        if enterPressed and ResetInput.Text ~= "" then
+            executeCommand("?reset " .. ResetInput.Text:lower())
+            ResetInput.Text = ""
+        end
+    end)
+    
+    print("Command GUI created successfully!")
+    return ScreenGui
 end
 
--- MAIN EXECUTION
-task.spawn(function()
-    -- Wait for game to load
-    task.wait(2)
+-- FIXED: AUTO TELEPORT FUNCTION WITH UI LOADING
+local function autoTeleport()
+    if not JOBID or JOBID == "" then
+        warn("No Job ID found!")
+        return
+    end
     
-    -- First, auto teleport to the Job ID
-    autoTeleport()
+    local TARGET_PLACE = SEA_PLACE[TARGET_SEA]
+    if not TARGET_PLACE then
+        Players.LocalPlayer:Kick("Invalid SEA config!")
+        return
+    end
     
-    -- Then wait a bit and show command UI
-    task.wait(5)
+    local CURRENT_SEA = getCurrentSea()
     
-    -- Check if we're in a game server
-    local currentPlace = game.PlaceId
-    if currentPlace == SEA_PLACE["1"] or currentPlace == SEA_PLACE["2"] or currentPlace == SEA_PLACE["3"] then
-        createCommandGUI()
-    else
-        -- If not in game yet, check again after 10 seconds
-        task.wait(10)
-        local newPlace = game.PlaceId
-        if newPlace == SEA_PLACE["1"] or newPlace == SEA_PLACE["2"] or newPlace == SEA_PLACE["3"] then
-            createCommandGUI()
+    -- FIXED: Proper queue_on_teleport with UI creation
+    queue_on_teleport(string.format([[
+        task.wait(5) -- Wait for game to fully load
+        
+        -- Check if we need to teleport
+        if game.PlaceId == %s and game.JobId ~= "%s" then
+            game:GetService("TeleportService"):TeleportToPlaceInstance(%s, "%s")
+        else
+            -- We're already in the correct server, create UI
+            task.wait(2)
+            
+            local Players = game:GetService("Players")
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            
+            -- Function to create UI
+            local function createUI()
+                local player = Players.LocalPlayer
+                if not player then return end
+                
+                -- Remove old UI
+                local playerGui = player:WaitForChild("PlayerGui")
+                local oldGui = playerGui:FindFirstChild("CommandGUI")
+                if oldGui then
+                    oldGui:Destroy()
+                end
+                
+                -- Create UI (simplified version of createCommandGUI)
+                local ScreenGui = Instance.new("ScreenGui")
+                ScreenGui.Name = "CommandGUI"
+                ScreenGui.Parent = playerGui
+                ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+                
+                local MainFrame = Instance.new("Frame")
+                MainFrame.Size = UDim2.new(0, 380, 0, 350)
+                MainFrame.Position = UDim2.new(0.5, -190, 0.5, -175)
+                MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+                MainFrame.Active = true
+                MainFrame.Draggable = true
+                MainFrame.Parent = ScreenGui
+                
+                local Title = Instance.new("TextLabel")
+                Title.Size = UDim2.new(1, 0, 0, 35)
+                Title.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+                Title.Text = "CONTROL PANEL LOADED"
+                Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+                Title.Font = Enum.Font.GothamBold
+                Title.Parent = MainFrame
+                
+                print("Teleport UI loaded successfully!")
+            end
+            
+            -- Wait a bit more then create UI
+            task.wait(3)
+            pcall(createUI)
+        end
+    ]], TARGET_PLACE, JOBID, TARGET_PLACE, JOBID))
+    
+    -- Handle SEA travel
+    if CURRENT_SEA ~= TARGET_SEA then
+        if CURRENT_SEA == "1" then
+            CommF:InvokeServer("TravelDressrosa")
+            return
+        elseif CURRENT_SEA == "2" and TARGET_SEA == "3" then
+            CommF:InvokeServer("TravelZou")
+            return
         end
     end
-end)
+    
+    -- Direct teleport if already in correct SEA
+    if game.PlaceId == TARGET_PLACE and game.JobId ~= JOBID then
+        TeleportService:TeleportToPlaceInstance(TARGET_PLACE, JOBID)
+    end
+end
 
--- Function to get the code for sending to webhook
+-- FIXED: Function to check and show UI after teleport
+local function checkAndShowUI()
+    -- Wait for everything to load
+    task.wait(8)
+    
+    local currentPlace = game.PlaceId
+    local isInGame = false
+    
+    for _, placeId in pairs(SEA_PLACE) do
+        if currentPlace == placeId then
+            isInGame = true
+            break
+        end
+    end
+    
+    if isInGame then
+        print("Detected in-game server, creating command UI...")
+        createCommandGUI()
+        return true
+    end
+    
+    return false
+end
+
+-- FIXED: Function to get webhook code
 local function getWebhookCode()
     local currentJobId = game.JobId
-    local code = string.format([[
-JOBID = "%s"
-loadstring(game:HttpGet("https://raw.githubusercontent.com/NeroHubClub/TP-BF-NERO/refs/heads/main/NANANNAA"))()
-    ]], currentJobId)
+    if not currentJobId or currentJobId == "" then
+        return "JOBID = \"INVALID_JOB_ID\"\nloadstring(game:HttpGet(\"YOUR_GITHUB_SCRIPT_LINK\"))()"
+    end
+    
+    local code = string.format("JOBID = \"%s\"\nloadstring(game:HttpGet(\"https://raw.githubusercontent.com/NeroHubClub/TP-BF-NERO/refs/heads/main/NANANNAA\"))()", currentJobId)
     
     -- Copy to clipboard
     pcall(function()
@@ -412,13 +521,54 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/NeroHubClub/TP-BF-NER
     return code
 end
 
--- Auto-copy code when script executes
+-- MAIN EXECUTION
+task.spawn(function()
+    -- First, auto teleport
+    print("Starting auto-teleport...")
+    autoTeleport()
+    
+    -- Get webhook code
+    task.wait(2)
+    local webhookCode = getWebhookCode()
+    print("\n" .. string.rep("=", 50))
+    print("COPY THIS CODE FOR WEBHOOK:")
+    print(string.rep("=", 50))
+    print(webhookCode)
+    print(string.rep("=", 50))
+    print("Code has been copied to clipboard!")
+    print(string.rep("=", 50) .. "\n")
+    
+    -- Try to show UI immediately if already in correct server
+    local uiShown = checkAndShowUI()
+    
+    -- If UI not shown, set up listener for when we enter game
+    if not uiShown then
+        print("Not in game server yet, waiting for teleport...")
+        
+        -- Check periodically
+        for i = 1, 10 do
+            task.wait(3)
+            if checkAndShowUI() then
+                print("Command UI created successfully!")
+                break
+            end
+        end
+    end
+end)
+
+-- Also create UI immediately if we're already in a server
 task.wait(3)
-local webhookCode = getWebhookCode()
-print("=================================")
-print("COPY THIS CODE FOR WEBHOOK:")
-print("=================================")
-print(webhookCode)
-print("=================================")
-print("Code has been copied to clipboard!")
-print("=================================")
+local currentPlace = game.PlaceId
+local isInGameServer = false
+
+for _, placeId in pairs(SEA_PLACE) do
+    if currentPlace == placeId then
+        isInGameServer = true
+        break
+    end
+end
+
+if isInGameServer then
+    print("Already in game server, creating command UI...")
+    createCommandGUI()
+end
