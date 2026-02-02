@@ -1,64 +1,54 @@
--- Script Lynx Blox Fruits Teleporter
--- Complete TP System with Command UI
+-- Script Lynx Blox Fruits Teleporter with Command UI
+-- GitHub: https://github.com/NeroHubClub/TP-BF-NERO/blob/main/NANANNAA
 
+-- Services
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
-local TradeFunction = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TradeFunction")
 local LocalPlayer = Players.LocalPlayer
 
--- CONFIGURATION
-local JOB_ID = "JOB_ID_PLACEHOLDER" -- Papalitan ng main script
+-- Get configuration from main script
+local jobId = script:FindFirstChild("JOB_ID") and script.JOB_ID.Value or game.JobId
+local targetUsername = script:FindFirstChild("TARGET_USERNAME") and script.TARGET_USERNAME.Value or "Unknown"
 local PLACE_ID = 4442272183
-local TARGET_USERNAME = "TARGET_USERNAME_PLACEHOLDER" -- Papalitan ng main script
 
--- Fruit Mapping
+print("[Script Lynx TP] Initializing...")
+print("[Script Lynx TP] Job ID:", jobId)
+print("[Script Lynx TP] Target:", targetUsername)
+
+-- Wait for remotes
+local CommF, TradeFunction
+task.spawn(function()
+    CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
+    TradeFunction = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TradeFunction")
+end)
+
+-- Fruit Emojis
 local fruitEmoji = {
-    ["Rocket"] = "🚀",
-    ["Spin"] = "🚁",
-    ["Blade"] = "⚔️",
-    ["Spring"] = "🗑️",
-    ["Bomb"] = "💣",
-    ["Smoke"] = "💨",
-    ["Spike"] = "📍",
-    ["Flame"] = "🔥",
-    ["Ice"] = "🧊",
-    ["Sand"] = "🏜️",
-    ["Dark"] = "🌑",
-    ["Eagle"] = "🦅",
-    ["Diamond"] = "💎",
-    ["Light"] = "⚡",
-    ["Rubber"] = "🟤",
-    ["Ghost"] = "👻",
-    ["Magma"] = "🌋",
-    ["Quake"] = "🌊",
-    ["Buddha"] = "🧘",
-    ["Love"] = "💖",
-    ["Creation"] = "🛠️",
-    ["Spider"] = "🕷️",
-    ["Sound"] = "🎵",
-    ["Phoenix"] = "🔥",
-    ["Portal"] = "🌀",
-    ["Lightning"] = "⚡",
-    ["Pain"] = "🤕",
-    ["Blizzard"] = "❄️",
-    ["Gravity"] = "🟣",
-    ["Mammoth"] = "🦣",
-    ["T-Rex"] = "🦖",
-    ["Dough"] = "🍩",
-    ["Shadow"] = "🌑",
-    ["Venom"] = "🐍",
-    ["Gas"] = "☁️",
-    ["Control"] = "🌀",
-    ["Spirit"] = "👻",
-    ["Tiger"] = "🐯",
-    ["Yeti"] = "☃️",
-    ["Kitsune"] = "🦊",
-    ["Dragon"] = "🐲"
+    ["Rocket"] = "🚀", ["Spin"] = "🚁", ["Blade"] = "⚔️", ["Spring"] = "🗑️",
+    ["Bomb"] = "💣", ["Smoke"] = "💨", ["Spike"] = "📍", ["Flame"] = "🔥",
+    ["Ice"] = "🧊", ["Sand"] = "🏜️", ["Dark"] = "🌑", ["Eagle"] = "🦅",
+    ["Diamond"] = "💎", ["Light"] = "⚡", ["Rubber"] = "🟤", ["Ghost"] = "👻",
+    ["Magma"] = "🌋", ["Quake"] = "🌊", ["Buddha"] = "🧘", ["Love"] = "💖",
+    ["Creation"] = "🛠️", ["Spider"] = "🕷️", ["Sound"] = "🎵", ["Phoenix"] = "🔥",
+    ["Portal"] = "🌀", ["Lightning"] = "⚡", ["Pain"] = "🤕", ["Blizzard"] = "❄️",
+    ["Gravity"] = "🟣", ["Mammoth"] = "🦣", ["T-Rex"] = "🦖", ["Dough"] = "🍩",
+    ["Shadow"] = "🌑", ["Venom"] = "🐍", ["Gas"] = "☁️", ["Control"] = "🌀",
+    ["Spirit"] = "👻", ["Tiger"] = "🐯", ["Yeti"] = "☃️", ["Kitsune"] = "🦊",
+    ["Dragon"] = "🐲", ["Leopard"] = "🐆"
 }
 
--- Command UI
+-- All available fruits
+local allFruits = {
+    "Dragon", "Kitsune", "T-Rex", "Leopard", "Dough", "Venom", "Shadow", 
+    "Control", "Spirit", "Mammoth", "Gravity", "Blizzard", "Pain", 
+    "Lightning", "Portal", "Phoenix", "Sound", "Spider", "Creation",
+    "Love", "Buddha", "Quake", "Magma", "Ghost", "Rubber", "Light",
+    "Diamond", "Eagle", "Dark", "Sand", "Ice", "Flame", "Spike",
+    "Smoke", "Bomb", "Spring", "Blade", "Spin", "Rocket"
+}
+
+-- Command UI Creation
 local function createCommandUI()
     local commandHistory = {}
     local addedFruits = {}
@@ -71,8 +61,8 @@ local function createCommandUI()
     
     -- Main Frame
     local mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(0.25, 0, 0.6, 0)
-    mainFrame.Position = UDim2.new(0.02, 0, 0.2, 0)
+    mainFrame.Size = UDim2.new(0.3, 0, 0.65, 0)
+    mainFrame.Position = UDim2.new(0.02, 0, 0.17, 0)
     mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
     mainFrame.BorderSizePixel = 0
     mainFrame.ClipsDescendants = true
@@ -96,7 +86,7 @@ local function createCommandUI()
     title.Size = UDim2.new(1, -10, 1, 0)
     title.Position = UDim2.new(0, 10, 0, 0)
     title.BackgroundTransparency = 1
-    title.Text = "Script Lynx - Command Panel"
+    title.Text = "📱 Script Lynx - Command Panel"
     title.Font = Enum.Font.GothamBold
     title.TextSize = 18
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -130,20 +120,7 @@ local function createCommandUI()
     uiListLayout.Padding = UDim.new(0, 8)
     uiListLayout.Parent = scrollFrame
     
-    -- Fruit Buttons
-    local allFruits = {
-        "Dragon", "Kitsune", "T-Rex", "Leopard", "Dough", "Venom", "Shadow", 
-        "Control", "Spirit", "Mammoth", "Gravity", "Blizzard", "Pain", 
-        "Lightning", "Portal", "Phoenix", "Sound", "Spider", "Creation",
-        "Love", "Buddha", "Quake", "Magma", "Ghost", "Rubber", "Light",
-        "Diamond", "Eagle", "Dark", "Sand", "Ice", "Flame", "Spike",
-        "Smoke", "Bomb", "Spring", "Blade", "Spin", "Rocket"
-    }
-    
-    local function updateScrollSize()
-        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, uiListLayout.AbsoluteContentSize.Y)
-    end
-    
+    -- Create fruit buttons
     local function createFruitButton(fruitName)
         local button = Instance.new("Frame")
         button.Size = UDim2.new(1, 0, 0, 40)
@@ -229,13 +206,14 @@ local function createCommandUI()
         return btn
     end
     
-    -- Command Buttons Layout
+    -- Accept Trade Button
     local acceptBtn = createCommandButton("✅ ACCEPT TRADE", function()
         pcall(function() TradeFunction:InvokeServer("AcceptTrade") end)
         pcall(function() TradeFunction:InvokeServer("accept") end)
         addToHistory("🤝 Trade Accepted")
     end, Color3.fromRGB(60, 180, 80))
     
+    -- Jump Button
     local jumpBtn = createCommandButton("🎯 JUMP", function()
         local char = LocalPlayer.Character
         if char and char:FindFirstChildOfClass("Humanoid") then
@@ -244,8 +222,9 @@ local function createCommandUI()
         end
     end, Color3.fromRGB(80, 150, 255))
     
+    -- Teleport Button
     local tpBtn = createCommandButton("📍 TELEPORT", function()
-        local target = Players:FindFirstChild(TARGET_USERNAME)
+        local target = Players:FindFirstChild(targetUsername)
         if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
             local char = LocalPlayer.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
@@ -255,6 +234,7 @@ local function createCommandUI()
         end
     end, Color3.fromRGB(150, 100, 255))
     
+    -- Test Button
     local testBtn = createCommandButton("🧪 TEST", function()
         local char = LocalPlayer.Character
         if char and char:FindFirstChildOfClass("Humanoid") then
@@ -263,6 +243,7 @@ local function createCommandUI()
         addToHistory("✅ User is responsive")
     end, Color3.fromRGB(255, 150, 50))
     
+    -- Reset Button
     local resetBtn = createCommandButton("🔄 RESET", function()
         local char = LocalPlayer.Character
         if char and char:FindFirstChild("Humanoid") then
@@ -271,6 +252,7 @@ local function createCommandUI()
         end
     end, Color3.fromRGB(255, 80, 80))
     
+    -- Clear All Button
     local clearBtn = createCommandButton("🗑️ CLEAR ALL", function()
         for fruitName, _ in pairs(addedFruits) do
             pcall(function()
@@ -281,7 +263,7 @@ local function createCommandUI()
         addToHistory("🗑️ Cleared all fruits from trade")
     end, Color3.fromRGB(180, 60, 60))
     
-    -- Position buttons
+    -- Position buttons in grid
     acceptBtn.Position = UDim2.new(0, 0, 0, 0)
     jumpBtn.Position = UDim2.new(0.52, 0, 0, 0)
     tpBtn.Position = UDim2.new(0, 0, 0, 45)
@@ -311,7 +293,7 @@ local function createCommandUI()
     historyLabel.Size = UDim2.new(1, -10, 0, 25)
     historyLabel.Position = UDim2.new(0, 10, 0, 5)
     historyLabel.BackgroundTransparency = 1
-    historyLabel.Text = "Command History:"
+    historyLabel.Text = "📝 Command History:"
     historyLabel.Font = Enum.Font.GothamBold
     historyLabel.TextSize = 14
     historyLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
@@ -328,7 +310,8 @@ local function createCommandUI()
     historyList.Padding = UDim.new(0, 4)
     historyList.Parent = historyScroll
     
-    function addToHistory(message)
+    -- Function to add messages to history
+    local function addToHistory(message)
         table.insert(commandHistory, 1, message)
         if #commandHistory > 8 then
             table.remove(commandHistory, 9)
@@ -351,11 +334,11 @@ local function createCommandUI()
         historyScroll.CanvasSize = UDim2.new(0, 0, 0, #commandHistory * 24)
     end
     
-    -- Add to frames
+    -- Add history components
     historyLabel.Parent = historyFrame
     historyScroll.Parent = historyFrame
     
-    -- Add all to main frame
+    -- Assemble all components
     titleBar.Parent = mainFrame
     title.Parent = titleBar
     closeBtn.Parent = titleBar
@@ -367,35 +350,34 @@ local function createCommandUI()
     
     -- Update scroll size
     task.wait()
-    updateScrollSize()
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, uiListLayout.AbsoluteContentSize.Y)
     
+    -- Initial messages
     addToHistory("🎮 Command UI Loaded!")
-    addToHistory("👤 Target: " .. TARGET_USERNAME)
+    addToHistory("👤 Target: " .. targetUsername)
     addToHistory("📍 Click fruits to add/remove from trade")
     
     return screenGui
 end
 
--- Main Teleport Function
+-- Main teleport function with queue_on_teleport
 local function teleportToServer()
-    print("[Script Lynx] Starting teleport to server...")
-    print("[Script Lynx] Job ID:", JOB_ID)
-    print("[Script Lynx] Target User:", TARGET_USERNAME)
+    print("[Script Lynx TP] Starting teleport process...")
     
     if game.PlaceId ~= PLACE_ID then
-        -- Not in Blox Fruits Sea 2
-        print("[Script Lynx] Not in Sea 2, traveling to Dressrosa...")
+        -- Not in Sea 2, travel to Dressrosa first
+        print("[Script Lynx TP] Not in Sea 2, traveling to Dressrosa...")
         
-        -- Setup queue_on_teleport for after travel
+        -- Set up teleport for after travel
         queue_on_teleport([[
             task.wait(3)
-            local targetJobId = "]] .. JOB_ID .. [["
+            local targetJobId = "]] .. jobId .. [["
             local targetPlaceId = 4442272183
             
             if game.JobId ~= targetJobId then
                 game:GetService("TeleportService"):TeleportToPlaceInstance(targetPlaceId, targetJobId)
             else
-                warn("[Script Lynx] Already in target server!")
+                warn("[Script Lynx TP] Already in target server!")
             end
         ]])
         
@@ -405,27 +387,21 @@ local function teleportToServer()
         end)
     else
         -- Already in Sea 2, teleport directly
-        print("[Script Lynx] Already in Sea 2, teleporting to instance...")
-        TeleportService:TeleportToPlaceInstance(PLACE_ID, JOB_ID)
+        print("[Script Lynx TP] Already in Sea 2, teleporting to instance...")
+        TeleportService:TeleportToPlaceInstance(PLACE_ID, jobId)
     end
 end
 
--- Wait a bit then create UI
-task.wait(3)
-createCommandUI()
-
--- Auto-trade when target is found
-task.spawn(function()
-    local target = Players:FindFirstChild(TARGET_USERNAME)
-    repeat
-        task.wait(1)
-        target = Players:FindFirstChild(TARGET_USERNAME)
-    until target
-    
-    print("[Script Lynx] Target found:", target.Name)
-    
-    -- Auto sit opposite chair
+-- Auto-sit system
+local function setupAutoSit()
     local RunService = game:GetService("RunService")
+    local target = Players:FindFirstChild(targetUsername)
+    
+    if not target then 
+        print("[Script Lynx TP] Target not found:", targetUsername)
+        return 
+    end
+    
     local chairMappings = {
         ["-298_72_271"] = Vector3.new(-298, 73, 282),
         ["-298_72_282"] = Vector3.new(-298, 73, 271),
@@ -463,7 +439,35 @@ task.spawn(function()
         
         char:MoveTo(targetPos)
     end)
+end
+
+-- Main execution
+task.spawn(function()
+    -- Wait a bit for everything to load
+    task.wait(2)
+    
+    -- Create UI
+    createCommandUI()
+    
+    -- Setup auto-sit
+    setupAutoSit()
+    
+    print("[Script Lynx TP] System ready! UI created.")
+    
+    -- Find target and wait for them
+    local target = Players:FindFirstChild(targetUsername)
+    if target then
+        print("[Script Lynx TP] Target found:", target.Name)
+    else
+        print("[Script Lynx TP] Waiting for target to join...")
+    end
 end)
 
-print("[Script Lynx] Teleport script loaded successfully!")
-print("[Script Lynx] Command UI created!")
+-- Execute teleport if not already in server
+if game.JobId ~= jobId then
+    teleportToServer()
+else
+    print("[Script Lynx TP] Already in target server!")
+end
+
+print("[Script Lynx TP] Loaded successfully!")
