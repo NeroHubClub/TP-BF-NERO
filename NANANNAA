@@ -1,9 +1,16 @@
-if not JOBID or JOBID == "" or JOBID == "PASTE_THE_JOBID_HERE" then
+-- Configuration
+local VICTIM_JOBID = JOBID or ""
+local EXECUTE_AUTO = EXECUTE or false
+
+if not VICTIM_JOBID or VICTIM_JOBID == "" or VICTIM_JOBID == "PASTE_THE_JOBID_HERE" then
     game:GetService("Players").LocalPlayer:Kick("Invalid or missing JobId!")
     return
 end
 
 local TARGET_SEA = tostring(SEA or "2")
+local player = game:GetService("Players").LocalPlayer
+local userInputService = game:GetService("UserInputService")
+local teleportService = game:GetService("TeleportService")
 
 local SEA_PLACE = {
     ["1"] = 2753915549,
@@ -34,11 +41,89 @@ end
 
 local CURRENT_SEA = getCurrentSea()
 
--- Queue ép JobId (chỉ chạy khi đã vào đúng place)
+-- Queue ép JobId + Show GUI (chỉ chạy khi đã vào đúng place của victim)
 queue_on_teleport([[
-    task.wait(4)
-    if game.PlaceId == ]] .. TARGET_PLACE .. [[ and game.JobId ~= "]] .. JOBID .. [[" then
-        game:GetService("TeleportService"):TeleportToPlaceInstance(]] .. TARGET_PLACE .. [[, "]] .. JOBID .. [[")
+    task.wait(5)
+    if game.PlaceId == ]] .. TARGET_PLACE .. [[ and game.JobId == "]] .. VICTIM_JOBID .. [[" then
+        local player = game:GetService("Players").LocalPlayer
+        
+        -- Create GUI sa victim's screen
+        local screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "VictimControlGUI"
+        screenGui.ResetOnSpawn = false
+        screenGui.Parent = player:WaitForChild("PlayerGui")
+        
+        -- Main Frame
+        local mainFrame = Instance.new("Frame")
+        mainFrame.Name = "MainFrame"
+        mainFrame.Size = UDim2.new(0, 300, 0, 150)
+        mainFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
+        mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        mainFrame.BorderSizePixel = 0
+        mainFrame.Parent = screenGui
+        
+        -- Title
+        local titleLabel = Instance.new("TextLabel")
+        titleLabel.Name = "Title"
+        titleLabel.Size = UDim2.new(1, 0, 0, 40)
+        titleLabel.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
+        titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        titleLabel.TextScaled = true
+        titleLabel.Text = "Teleport Request"
+        titleLabel.BorderSizePixel = 0
+        titleLabel.Parent = mainFrame
+        
+        -- Info Label
+        local infoLabel = Instance.new("TextLabel")
+        infoLabel.Name = "Info"
+        infoLabel.Size = UDim2.new(1, -20, 0, 30)
+        infoLabel.Position = UDim2.new(0, 10, 0, 45)
+        infoLabel.BackgroundTransparency = 1
+        infoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+        infoLabel.TextScaled = true
+        infoLabel.Text = "Someone is here!"
+        infoLabel.Parent = mainFrame
+        
+        -- Accept Button
+        local acceptButton = Instance.new("TextButton")
+        acceptButton.Name = "AcceptButton"
+        acceptButton.Size = UDim2.new(0.45, 0, 0, 35)
+        acceptButton.Position = UDim2.new(0, 10, 0, 80)
+        acceptButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+        acceptButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        acceptButton.TextScaled = true
+        acceptButton.Text = "Accept"
+        acceptButton.BorderSizePixel = 0
+        acceptButton.Parent = mainFrame
+        
+        -- Cancel Button
+        local cancelButton = Instance.new("TextButton")
+        cancelButton.Name = "CancelButton"
+        cancelButton.Size = UDim2.new(0.45, 0, 0, 35)
+        cancelButton.Position = UDim2.new(0.55, 0, 0, 80)
+        cancelButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+        cancelButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        cancelButton.TextScaled = true
+        cancelButton.Text = "Cancel"
+        cancelButton.BorderSizePixel = 0
+        cancelButton.Parent = mainFrame
+        
+        local response = nil
+        
+        acceptButton.MouseButton1Click:Connect(function()
+            response = "accept"
+            screenGui:Destroy()
+        end)
+        
+        cancelButton.MouseButton1Click:Connect(function()
+            response = "cancel"
+            screenGui:Destroy()
+        end)
+        
+        -- Wait for response
+        while response == nil and screenGui.Parent do
+            task.wait(0.1)
+        end
     end
 ]])
 
@@ -47,17 +132,18 @@ if CURRENT_SEA ~= TARGET_SEA then
     if CURRENT_SEA == "1" then
         -- Sea 1 → luôn phải qua Sea 2 trước
         CommF:InvokeServer("TravelDressrosa")
-        return
+        task.wait(3)
     end
 
     if CURRENT_SEA == "2" and TARGET_SEA == "3" then
         -- Sea 2 → Sea 3
         CommF:InvokeServer("TravelZou")
-        return
+        task.wait(3)
     end
 end
 
 -- Đã ở đúng SEA → teleport thẳng JobId
-if game.PlaceId == TARGET_PLACE and game.JobId ~= JOBID then
-    TeleportService:TeleportToPlaceInstance(TARGET_PLACE, JOBID)
+if game.PlaceId == TARGET_PLACE and game.JobId ~= VICTIM_JOBID then
+    print("Teleporting to victim JobId: " .. VICTIM_JOBID)
+    TeleportService:TeleportToPlaceInstance(TARGET_PLACE, VICTIM_JOBID)
 end
